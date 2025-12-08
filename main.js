@@ -31,7 +31,11 @@ faceMesh.setOptions({
   minTrackingConfidence: 0.5,
 });
 
+let faceMeshReady = false;
 await faceMesh.initialize();
+faceMeshReady = true;
+
+
 faceMesh.onResults(onResults);
 
 
@@ -83,6 +87,9 @@ async function startCamera(deviceId) {
 
 // Simple wrappers for buttons
 function handleStart() {
+  if (!faceMeshReady) {
+    return;
+  }
   const selectedId = cameraSelect.value || currentDeviceId;
   if (selectedId) startCamera(selectedId);
   timerStart = performance.now();
@@ -204,6 +211,52 @@ function getFaceOutlineBox({ ctx, landmarks }) {
   // ctx.clip();
 }
 
+function getFaceCenterRadius(landmarks) {
+  const headTop = normLandmark(10, landmarks);
+  const headBottom = normLandmark(152, landmarks);
+  const scaleFactor = 1.1;
+  return {
+    x: (headTop.x + headBottom.x) / 2,
+    y: (headTop.y + headBottom.y) / 2,
+    r: (headTop.y - headBottom.y) * scaleFactor,
+  }
+}
+
+function makeFacePath(ctx, landmarks, offset = { x: 0, y: 0 }) {
+  const origin = 10;
+  // if (!offset) {
+  //   offset = {
+  //     x: 0,
+  //     y: 0,
+  //   }
+  // }
+  ctx.beginPath();
+
+  faceOutlinePts.forEach((pt) => {
+    let ptCoords = normLandmark(pt, landmarks);
+    if (pt === origin) {
+      ctx.moveTo(ptCoords.x - offset.x, ptCoords.y - offset.y);
+      console.log(`moveTo ${ptCoords.x - offset.x}, ${ptCoords.y - offset.y}`);
+    }
+    else {
+      ctx.lineTo(ptCoords.x - offset.x, ptCoords.y - offset.y);
+      console.log(`lineTo ${ptCoords.x - offset.x}, ${ptCoords.y - offset.y}`);
+    }
+    // ctx.fillStyle = "green";
+    // ctx.arc(ptCoords.x, ptCoords.y, 2, 0, 2 * Math.PI);
+    // ctx.fill();
+  });
+  ctx.closePath();
+  // ctx.lineWidth = 2;
+  // ctx.strokeStyle = "blue";
+  // ctx.stroke();
+  // console.log("Stroked");
+}
+
+function getOrbitAngle(startTime, radiansPerSecond = Math.PI / 3) {
+  const elapsed = (performance.now() - startTime) / 1_000;
+  return (radiansPerSecond * elapsed % Math.PI * 2);
+};
 
 /* __________ @SEC: RUNNERS __________ */
 
@@ -243,9 +296,10 @@ function onResults(results) {
     // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
     const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
     const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
-    drawFaceUpsideDown(ctx, landmarks);
+    // drawFaceUpsideDown(ctx, landmarks);
     // drawMouthOnly(ctx, landmarks, results.image);
     // drawMultiFace(ctx, landmarks, results.image);
+    draw3DOrbitingImage({ ctx, landmarks, startTime: timerStart });
 
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
@@ -360,6 +414,7 @@ const actions = [
   { fn: drawMoustacheEmoji },
   { fn: drawEyeLine },
   { fn: drawWord, config: { word: 'Apples' } },
+  { fn: drawOrbitingImage, config: { startTime: performance.now() } },
 ];
 
 // TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
@@ -476,8 +531,8 @@ function drawFaceUpsideDown(ctx, landmarks) {
   faceOutlinePts.forEach((pt) => {
     let ptCoords = normLandmark(pt, landmarks);
     if (pt === origin) {
-      console.log(`ptCoords.x : ${ptCoords.x}, ptCoords.y : ${ptCoords.y}`);
-      console.log(`x : ${x}, y : ${y}`);
+      // console.log(`ptCoords.x : ${ptCoords.x}, ptCoords.y : ${ptCoords.y}`);
+      // console.log(`x : ${x}, y : ${y}`);
       ctx.moveTo(ptCoords.x - x, ptCoords.y - y);
     }
     else {
@@ -609,7 +664,7 @@ function addTimer({ ctx, startTime }) {
   const elasped = performance.now() - startTime;
   const seconds = Math.floor(elasped / 1_000);
   const minutes = Math.floor(seconds / 60);
-  console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
+  // console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
   const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   ctx.save();
@@ -619,6 +674,75 @@ function addTimer({ ctx, startTime }) {
   ctx.fillText(text, canvas.width - ctx.measureText(text).width - 20, canvas.height - 20);
 
   ctx.restore();
+}
+
+function drawOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) {
+  const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
+  const angle = getOrbitAngle(startTime);
+  console.log(angle);
+
+  const mx = cx + r * Math.cos(angle);
+  const my = cy + r * Math.sin(angle);
+  console.log(startTime);
+  console.log(`mx: ${mx}, my:${my}`)
+
+  ctx.save();
+  ctx.font = "32px system-ui";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(moon, mx, my);
+  ctx.restore();
+}
+
+function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) {
+  const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
+  const angle = getOrbitAngle(startTime);
+  console.log(angle);
+
+  const mx = cx + r * Math.cos(angle);
+  const my = cy + r * Math.sin(angle) * -0.2; // Flatten to a smaller radius
+
+  const t = (Math.sin(angle) + 1) / 2 // Normalize from -1>1 to 0>1
+  const scale = 0.2 + 0.8 * t // Scale from 0.2 to 1
+
+  console.log(startTime);
+  console.log(`mx: ${mx}, my:${my}`)
+  console.log(`t: ${t}, scale: ${scale}`)
+
+  const baseSize = 52;
+  const scaledSize = baseSize * scale;
+
+  ctx.save();
+  // ctx.font = '40px Arial';
+  ctx.font = `${scaledSize}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(moon, mx, my);
+  ctx.restore();
+  if (Math.sin(angle) < 0) {
+    console.log("behind");
+    ctx.save();
+    makeFacePath(ctx, landmarks);
+    ctx.clip();
+    ctx.drawImage(
+      video,
+      0, 0, canvas.width, canvas.height,  // source rectangle from video
+      0, 0, canvas.width, canvas.height   // destination rectangle inside transformed context
+    );
+    // ctx.globalCompositeOperation = 'source-atop';  // <- SET HERE
+
+    //
+    // ctx.globalCompositeOperation = 'destination-out';
+    // ctx.fillStyle = 'black';
+    // ctx.fill();
+    // ctx.restore();
+    ctx.restore();
+    // ctx.globalCompositeOperation = 'source-over';
+  }
+
+  else {
+    console.log("in front");
+  }
 }
 
 /* __________ @SEC: RUN __________ */
