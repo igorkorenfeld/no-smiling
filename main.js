@@ -25,8 +25,57 @@ const MOUTH = {
   S: 17
 }
 
+const faceOutlinePts = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397,
+  365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162,
+  21, 54, 103, 67, 109,
+];
+
 let camera = null;           // MediaPipe Camera helper
 let currentDeviceId = null;  // active camera id
+
+// Actions
+const actions = [
+  drawFaceWord,
+  drawMoustacheEmoji,
+  drawEyeLine,
+  drawWord,
+];
+// // Redo Actions as objects
+// const actions = [
+//   { fn: drawFaceWord, config: 'Hello' },
+//   { fn: drawMoustacheEmoji },
+//   { fn: drawEyeLine },
+// ];
+let showAction = false;
+let currentActionIndex = -1;
+
+let actionStartTime = 0;
+const actionDuration = 2_000;
+const actionInterval = 3_000;
+
+function addOverlay(ctx, landmarks, currentTime) {
+  if (currentActionIndex > -1) {
+    // console.log(currentTime);
+    // console.log("drawing action");
+    actions[currentActionIndex](ctx, landmarks, 'Hello');
+  }
+
+  if ((currentTime - actionStartTime) > actionDuration) {
+    // console.log(currentTime);
+    // console.log("end of action");
+    showAction = false;
+  }
+}
+
+function startActions() {
+  setInterval(() => {
+    // TODO: redo once decide on number of actions
+    currentActionIndex = (currentActionIndex + 1) % (actions.length);
+    console.log(`current action index: ${currentActionIndex}`);
+    showAction = true;
+    actionStartTime = performance.now();
+  }, actionInterval)
+}
 
 // List cameras and populate <select>
 async function listCameras() {
@@ -48,135 +97,144 @@ async function listCameras() {
 
 let lastAngle = 0;
 
+function drawMoustacheEmoji(ctx, landmarks) {
+  ctx.font = '40px Arial';
+  const moustachePoint = landmarks[2];
+  const moustacheX = moustachePoint.x * canvas.width;
+  const moustacheY = moustachePoint.y * canvas.height;
+  const leftCheek = landmarks[50];
+  const rightCheek = landmarks[280];
+  const faceWidth = Math.hypot(
+    (rightCheek.x - leftCheek.x) * canvas.width,
+    (rightCheek.y - leftCheek.y) * canvas.height,
+  );
+
+  ctx.font = `${faceWidth * 0.1}px Arial`;
+  ctx.fillText('🥸', moustacheX, moustacheY);
+}
+
+function drawFaceWord(ctx, landmarks, word) {
+  const foreheadPoint = landmarks[9];
+  const foreheadX = foreheadPoint.x * canvas.width;
+  const foreheadY = foreheadPoint.y * canvas.height;
+  const dy = landmarks[33].y * canvas.height - landmarks[263].y * canvas.height;
+  const dx = landmarks[33].x * canvas.width - landmarks[263].x * canvas.width;
+  const angleRadians = Math.atan2(dy, dx);
+
+  ctx.save();
+  // Let's change the canvas position to draw rotated
+  ctx.font = `20px Arial`;
+  ctx.translate(foreheadX, foreheadY);
+  ctx.rotate(angleRadians);
+  ctx.scale(-1, -1);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(word, 0, 0);
+  // ctx.fillText(lastAngle.toFixed(2), 0, 0);
+  ctx.restore();
+}
+
+// Draw landmarks as small circles
+function drawMouthPoints(ctx, landmarks) {
+  ctx.font = '10px Arial';
+  ctx.fillStyle = 'purple';
+
+  Object.values(MOUTH).forEach((pt) => {
+    const x = landmarks[pt].x * canvas.width;
+    const y = landmarks[pt].y * canvas.height;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.fillText(pt, x, y);
+  })
+}
+
+function drawEyeLine(ctx, landmarks) {
+  ctx.beginPath();
+
+  // Set a start-point
+  ctx.moveTo(landmarks[33].x * canvas.width, landmarks[33].y * canvas.height);
+
+  // Set an end-point
+  ctx.lineTo(landmarks[263].x * canvas.width, landmarks[263].y * canvas.height);
+
+  // Add the stroke
+  ctx.linewidth = 2;
+  ctx.strokeStyle = "red";
+  ctx.stroke();
+
+}
+
+
+// Get the Euclidane distance between two points
+// The points should have an x and y property
+function eucDist(p1, p2) {
+  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+
+
+// mouthConfidence = clamp(1.0 - (mouthJitter / JITTER_MAX), 0, 1) * shapeScore;
+//     const mouthLandmarkHistory = {
+//   61: [], // array of {x, y} points for landmark 61
+//   291: [], 
+//   13: [], 
+//   14: []
+// };
+
+// Update history with latest points elsewhere when frame arrives
+// Here dataPerFrame is {61: {x,y}, 291: {x,y}, ...}
+
+// function computeMouthJitter(mouthLandmarkHistory, currentFramePoints) {
+//   const landmarkIndices = [61, 291, 13, 14];
+//   let totalDist = 0;
+//   let count = 0;
+//
+//   landmarkIndices.forEach(i => {
+//     const history = mouthLandmarkHistory[i];
+//     if (history.length > 0) {
+//       const lastPoint = history[history.length - 1];
+//       totalDist += euclideanDist(currentFramePoints[i], lastPoint);
+//       count++;
+//     }
+//     history.push(currentFramePoints[i]);
+//     // limit history size to last M frames
+//     if (history.length > 10) history.shift();
+//   });
+//
+//   if (count === 0) return 0;
+//   return totalDist / count;
+// }
+
 // Called whenever FaceMesh has new results
 function onResults(results) {
-  ctx.save();
+  const now = performance.now();
+  // ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw the mirrored image
-  ctx.drawImage(
-    results.image, 0, 0, canvas.width, canvas.height
-  );
+  // ctx.save()
+  // ctx.translate(canvas.width, 0);
+  // ctx.scale(-1, 1);
+  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  // ctx.restore()
 
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const landmarks = results.multiFaceLandmarks[0]; // one face only
 
-    // Draw landmarks as small circles
-    ctx.fillStyle = 'purple';
-    // const mouthPoints = [MOUTH.LEFT, MOUTH.RIGHT, MOUTH.LOWER_LIP, MOUTH.RIGHT];
-    landmarks.forEach((pt, i) => {
-      if (Object.values(MOUTH).includes(i)) {
-        const x = pt.x * canvas.width;
-        const y = pt.y * canvas.height;
-        ctx.beginPath();
-        ctx.arc(x, y, 2, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillText(i, x, y);
-      }
-    });
+    drawMouthPoints(ctx, landmarks);
+    // drawMoustacheEmoji(ctx, landmarks);
 
+    //Draw Eye line
+    // drawEyeLine(ctx, landmarks);
 
-    ctx.font = '40px Arial';
-    const moustachePoint = landmarks[2];
-    const moustacheX = moustachePoint.x * canvas.width;
-    const moustacheY = moustachePoint.y * canvas.height;
-    const leftCheek = landmarks[50];
-    const rightCheek = landmarks[280];
-    const faceWidth = Math.hypot(
-      (rightCheek.x - leftCheek.x) * canvas.width,
-      (rightCheek.y - leftCheek.y) * canvas.height,
-    );
-
-    ctx.font = `${faceWidth * 0.1}px Arial`;
-    ctx.fillText('🥸', moustacheX, moustacheY);
-
-    const foreheadPoint = landmarks[9];
-    const foreheadX = foreheadPoint.x * canvas.width;
-    const foreheadY = foreheadPoint.y * canvas.height;
-    ctx.font = `20px Arial`;
-    const dx = landmarks[33].x * canvas.width - landmarks[263].x * canvas.width;
-    const dy = landmarks[33].y * canvas.height - landmarks[263].y * canvas.height;
-    const angleRadians = Math.atan2(dy, dx);
-    // const angleDegrees = (180 - angleRadians * (180 / Math.PI)).toFixed(2);
-    let angleDegrees = 180 - (angleRadians * (180 / Math.PI)).toFixed(2);
-    if (angleDegrees > 90) angleDegrees -= 180;
-    if (angleDegrees < -90) angleDegrees += 180;
-
-    // console.log(`angle Degrees: ${angleDegrees}`);
-    //
-    // ctx.fillText('Winner', foreheadX - ctx.measureText('Winner').width / 2, foreheadY);
-
-    console.log(landmarks[33].x * canvas.width, landmarks[33].y * canvas.height);
-    ctx.beginPath();
-
-    // Set a start-point
-    ctx.moveTo(landmarks[33].x * canvas.width, landmarks[33].y * canvas.height);
-
-    // Set an end-point
-    ctx.lineTo(landmarks[263].x * canvas.width, landmarks[263].y * canvas.height);
-    console.log(landmarks[263].x * canvas.width, landmarks[263].y * canvas.height);
-    console.log(`dx:${dx} dy:${dy} atan2:${angleRadians} degrees:${angleDegrees}`)
-
-    // Stroke it (Do the Drawing)
-    ctx.linewidth = 2;
-    ctx.strokeStyle = "red";
-    ctx.stroke();
-
-    const alpha = 0.2; // 0..1, lower = smoother
-    lastAngle = lastAngle + alpha * (angleDegrees - lastAngle);
-
-    ctx.save();
-    // Let's change the canvas position to draw rotated
-    ctx.translate(foreheadX, foreheadY);
-    ctx.rotate(angleRadians);
-    ctx.scale(-1, -1);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('hello', 0, 0);
-    // ctx.fillText(lastAngle.toFixed(2), 0, 0);
-    ctx.restore();
-
-    // 
-
-    // mouthConfidence = clamp(1.0 - (mouthJitter / JITTER_MAX), 0, 1) * shapeScore;
-    //     const mouthLandmarkHistory = {
-    //   61: [], // array of {x, y} points for landmark 61
-    //   291: [], 
-    //   13: [], 
-    //   14: []
-    // };
-    function euclideanDist(p1, p2) {
-      return Math.hypot(p1.x - p2.x, p1.y - p2.y);
-    }
-
-    // Update history with latest points elsewhere when frame arrives
-    // Here dataPerFrame is {61: {x,y}, 291: {x,y}, ...}
-
-    // function computeMouthJitter(mouthLandmarkHistory, currentFramePoints) {
-    //   const landmarkIndices = [61, 291, 13, 14];
-    //   let totalDist = 0;
-    //   let count = 0;
-    //
-    //   landmarkIndices.forEach(i => {
-    //     const history = mouthLandmarkHistory[i];
-    //     if (history.length > 0) {
-    //       const lastPoint = history[history.length - 1];
-    //       totalDist += euclideanDist(currentFramePoints[i], lastPoint);
-    //       count++;
-    //     }
-    //     history.push(currentFramePoints[i]);
-    //     // limit history size to last M frames
-    //     if (history.length > 10) history.shift();
-    //   });
-    //
-    //   if (count === 0) return 0;
-    //   return totalDist / count;
-    // }
 
     // Detect Smile
     // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
     const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
-    const isSmiling = score < 0.32 || score > 0.49;
+    const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
+    drawFaceUpsideDown(ctx, landmarks);
+    // drawMouthOnly(ctx, landmarks, results.image);
+    // drawMultiFace(ctx, landmarks, results.image);
 
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
@@ -222,10 +280,11 @@ function onResults(results) {
     }
     // console.log(`smiling? ${isSmiling}`);
     // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
+    addOverlay(ctx, landmarks, now);
   }
 
 
-  ctx.restore();
+  // ctx.restore();
 }
 
 // Initialize FaceMesh solution
@@ -345,6 +404,216 @@ async function run() {
   // Ask for permission once so device labels are available
   await navigator.mediaDevices.getUserMedia({ video: true });
   await listCameras();
+  startActions();
+}
+
+function drawFaceUpsideDown(ctx, landmarks) {
+  // Calculate face bounding box in pixels
+  let minX = 1, minY = 1, maxX = 0, maxY = 0;
+  landmarks.forEach(pt => {
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  });
+  console.log(`minX: ${minX}, minY: ${minY}, maxX: ${maxX},maxY: ${maxY}`);
+  const x = minX * canvas.width;
+  const y = minY * canvas.height;
+  const width = (maxX - minX) * canvas.width;
+  const height = (maxY - minY) * canvas.height;
+
+  if (width <= 0 || height <= 0) return;
+
+  // Save canvas state
+  ctx.save();
+
+  // Translate to center of face box (pivot for rotation)
+  ctx.translate(x + width / 2, y + height / 2);
+
+  // Rotate 180 degrees to flip upside down
+  ctx.rotate(Math.PI);
+
+  // Translate back to draw image aligned with rotation center
+  ctx.translate(-width / 2, -height / 2);
+
+  // ctx.save();
+  //
+  const origin = 10;
+  ctx.beginPath();
+  faceOutlinePts.forEach((pt) => {
+    let ptCoords = normLandmark(pt, landmarks);
+    if (pt === origin) {
+      ctx.moveTo(ptCoords.x - x, ptCoords.y - y);
+    }
+    else {
+      ctx.lineTo(ptCoords.x - x, ptCoords.y - y);
+    }
+  });
+  ctx.closePath();
+  ctx.clip();
+
+  // Draw the relevant face rectangle portion of video flipped
+  ctx.drawImage(
+    video,
+    x, y, width, height,  // source rectangle from video
+    0, 0, width, height   // destination rectangle inside transformed context
+  );
+
+  // Undo Clip
+  // ctx.restore();
+  // Restore canvas state to undo translation and rotation
+  ctx.restore();
+}
+
+function normLandmark(pt, landmarks) {
+  if (landmarks[pt]) {
+    return { x: landmarks[pt].x * canvas.width, y: landmarks[pt].y * canvas.height }
+  }
+  else {
+    return null;
+  }
+}
+
+function getFaceOutlineBox(ctx, landmarks) {
+  const origin = 10;
+  let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+  faceOutlinePts.forEach((pt) => {
+    const ptCoords = normLandmark(pt, landmarks);
+    // console.log(ptCoords);
+    minX = Math.min(minX, ptCoords.x);
+    minY = Math.min(minY, ptCoords.y);
+    maxX = Math.max(maxX, ptCoords.x);
+    maxY = Math.max(maxY, ptCoords.y);
+  });
+
+  return {
+    x: minX,
+    y: minY,
+    w: (maxX - minX),
+    h: (maxY - minY),
+  }
+
+  // ctx.beginPath();
+  // const originCoordinates = normLandmark(origin, landmarks);
+  // ctx.moveTo(originCoordinates.x, originCoordinates.y);
+  //
+  // faceOutlinePts.forEach((pt) => {
+  //   let ptCoords = normLandmark(pt, landmarks);
+  //   ctx.lineTo(ptCoords.x, ptCoords.y);
+  // });
+  //
+  // ctx.closePath();
+  // ctx.clip();
+}
+
+function drawMultiFace(ctx, landmarks, image) {
+  const faceOutlineBox = getFaceOutlineBox(ctx, landmarks);
+  const offsets = [-1, 1];
+  const padding = 25;
+  offsets.forEach((offset) => {
+    const destX = faceOutlineBox.x + (offset * (faceOutlineBox.w + (padding)));
+    console.log(destX);
+    // if (cloneX + faceOutlineBox.w < 0 || cloneX + faceOutlineBox.w > canvas.width) return;
+    ctx.save();
+    ctx.translate(destX, faceOutlineBox.y);
+
+    // 200, 
+
+    const origin = 10;
+    ctx.beginPath();
+
+    // TODO: Extract as a function
+    faceOutlinePts.forEach((pt) => {
+      let ptCoords = normLandmark(pt, landmarks);
+      if (pt === origin) {
+        ctx.moveTo(ptCoords.x - faceOutlineBox.x, ptCoords.y - faceOutlineBox.y);
+      }
+      else {
+        ctx.lineTo(ptCoords.x - faceOutlineBox.x, ptCoords.y - faceOutlineBox.y);
+      }
+    });
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.drawImage(
+      image,
+      faceOutlineBox.x, faceOutlineBox.y, faceOutlineBox.w, faceOutlineBox.h,
+      0, 0, faceOutlineBox.w, faceOutlineBox.h
+    );
+    ctx.restore();
+  });
+
+}
+
+function drawMouthOnly(ctx, landmarks, image) {
+  // const detailedMouthLandmarks = [
+  //   291, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 323, 361, 291
+  // ];
+  const detailedMouthLandmarks = [146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+
+  ctx.save(); // S1
+  ctx.fillStyle = 'black';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save(); //S2
+  const origin = landmarks[61];
+  ctx.beginPath();
+  ctx.moveTo(origin.x * canvas.width, origin.y * canvas.height);
+
+  detailedMouthLandmarks.forEach((pt) => {
+    ctx.lineTo(landmarks[pt].x * canvas.width, landmarks[pt].y * canvas.height);
+  });
+
+  ctx.closePath();
+  ctx.clip();
+
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  // ctx.fillStyle = 'green';
+  // detailedMouthLandmarks.forEach((pt) => {
+  //   console.log(landmarks[pt].x * canvas.width, landmarks[pt].y * canvas.height);
+  //   const x = landmarks[pt].x * canvas.width;
+  //   const y = landmarks[pt].y * canvas.height;
+  //   ctx.beginPath();
+  //   ctx.arc(x, y, 2, 0, 2 * Math.PI);
+  //   ctx.fill()
+  //   ctx.fillText("g", x, y);
+  // });
+
+  ctx.restore(); //xS2
+  ctx.restore(); //xS1
+}
+//
+
+// function drawPenText(ctx, image) {
+//   const prefix = "PEN ";
+//
+// }
+
+function drawWord(ctx, word = "apples") {
+  ctx.save();
+  ctx.font = '24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  const padding = 16;
+  const textWidth = ctx.measureText(word);
+  const boxWidth = textWidth + (padding * 2);
+  const boxHeight = 8;
+  const boxPosition = {
+    x: (canvas.width / 2) - (textWidth / 2) - padding,
+    y: 0,
+  }
+
+  ctx.fillStyle = 'rgba(0, 0, 0, .24)';
+  ctx.fillRect = (boxPosition.x, boxPosition.y, boxWidth, boxHeight);
+  // ctx.fillText(word, boxPosition.x + padding, boxPosition.y + padding);
+  ctx.fillStyle = 'white';
+  ctx.fillText(word, 10, 10);
+
+  ctx.restore();
+
+
 }
 
 run();
