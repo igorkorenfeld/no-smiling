@@ -10,6 +10,22 @@ const ctx = canvas.getContext('2d');
 const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
+//
+// Initialize FaceMesh solution
+const faceMesh = new FaceMesh({
+  locateFile: (file) =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+});
+
+faceMesh.setOptions({
+  maxNumFaces: 1,
+  refineLandmarks: false,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5,
+});
+
+await faceMesh.initialize();
+faceMesh.onResults(onResults);
 
 //LANDMARK KEYPOINTS
 const MOUTH = {
@@ -297,20 +313,6 @@ function onResults(results) {
   // ctx.restore();
 }
 
-// Initialize FaceMesh solution
-const faceMesh = new FaceMesh({
-  locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-});
-
-faceMesh.setOptions({
-  maxNumFaces: 1,
-  refineLandmarks: false,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
-});
-
-faceMesh.onResults(onResults);
 
 // Start MediaPipe camera for a given deviceId
 async function startCamera(deviceId) {
@@ -605,8 +607,6 @@ function drawWord({ ctx, word = 'Pineapple' } = {}) {
 
   const padding = 16;
   const textWidth = ctx.measureText(word).width;
-  console.log("textWidth");
-  console.log(textWidth);
   const boxWidth = textWidth + (padding * 2);
   const boxHeight = 40;
   const boxPosition = {
