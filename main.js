@@ -1,8 +1,11 @@
+/* __________ @SEC: TODO IMPORTS __________ */
 // 
 // import { FaceMesh } from '@mediapipe/face_mesh';
 // import { Camera } from '@mediapipe/camera_utils';
 // import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 //npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
+
+/* __________ @SEC: DOM CONSTANTS __________ */
 
 const videoElement = document.getElementById('video');
 const canvas = document.getElementById('c1');
@@ -10,7 +13,11 @@ const ctx = canvas.getContext('2d');
 const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
-//
+
+
+/* __________ @SEC: FaceMesh INIT __________ */
+/* Doing this early to help with page load */
+
 // Initialize FaceMesh solution
 const faceMesh = new FaceMesh({
   locateFile: (file) =>
@@ -26,6 +33,273 @@ faceMesh.setOptions({
 
 await faceMesh.initialize();
 faceMesh.onResults(onResults);
+
+
+/* __________ @SEC: SETUP - CAMERA  __________ */
+
+let camera = null;           // MediaPipe Camera helper
+let currentDeviceId = null;  // active camera id
+
+// List cameras and populate <select>
+async function listCameras() {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const cameras = devices.filter(d => d.kind === 'videoinput');
+
+  cameraSelect.innerHTML = '';
+  cameras.forEach((cam, index) => {
+    const opt = document.createElement('option');
+    opt.value = cam.deviceId;
+    opt.textContent = cam.label || `Camera ${index + 1}`;
+    cameraSelect.appendChild(opt);
+  });
+
+  if (cameras.length > 0 && !currentDeviceId) {
+    currentDeviceId = cameras[0].deviceId;
+  }
+}
+
+// Start MediaPipe camera for a given deviceId
+async function startCamera(deviceId) {
+  if (camera) {
+    camera.stop();
+    camera = null;
+  }
+
+  currentDeviceId = deviceId;
+
+  // MediaPipe Camera util accepts a video element and onFrame callback
+  camera = new Camera(videoElement, {
+    onFrame: async () => {
+      await faceMesh.send({ image: videoElement });
+    },
+    width: 640,
+    height: 480,
+    facingMode: 'user',
+    deviceId: deviceId, // custom field; many people pass through constraints here
+  });
+
+  camera.start();
+}
+
+// Simple wrappers for buttons
+function handleStart() {
+  const selectedId = cameraSelect.value || currentDeviceId;
+  if (selectedId) startCamera(selectedId);
+  timerStart = performance.now();
+}
+
+function handleStop() {
+  if (camera) {
+    camera.stop();
+    camera = null;
+  }
+}
+
+// When camera selection changes, restart with new device
+cameraSelect.addEventListener('change', () => {
+  const selectedId = cameraSelect.value;
+  if (selectedId) startCamera(selectedId);
+});
+
+btnStart.addEventListener('click', handleStart);
+btnStop.addEventListener('click', handleStop);
+
+
+/* __________ @SEC: UTILITIES __________ */
+//
+// Get the Euclidane distance between two points
+// The points should have an x and y property
+function eucDist(p1, p2) {
+  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+}
+
+function getSmileScore(landmarks) {
+  // const dx = landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x;
+  // const dy = landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y;
+  // const mouthWidth = Math.sqrt(dx * dx + dy * dy);
+
+  // Original Calc
+  // const mouthWidth = Math.hypot(
+  //   landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x,
+  //   landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y
+  // );
+  //
+  // const mouthHeight = Math.hypot(
+  //   landmarks[MOUTH.UPPER_LIP].x - landmarks[MOUTH.LOWER_LIP].x,
+  //   landmarks[MOUTH.UPPER_LIP].y - landmarks[MOUTH.LOWER_LIP].y,
+  // );
+  //
+  // const score = mouthWidth / mouthHeight;
+  // const score = mouthHeight / mouthWidth;
+
+
+  // MAR
+  const rightDiff = Math.hypot(
+    landmarks[MOUTH.NE].x - landmarks[MOUTH.SE].x,
+    landmarks[MOUTH.NE].y - landmarks[MOUTH.SE].y,
+  );
+
+  const centerDiff = Math.hypot(
+    landmarks[MOUTH.N].x - landmarks[MOUTH.S].x,
+    landmarks[MOUTH.N].y - landmarks[MOUTH.S].y,
+  );
+
+  const leftDiff = Math.hypot(
+    landmarks[MOUTH.NW].x - landmarks[MOUTH.SW].x,
+    landmarks[MOUTH.NW].y - landmarks[MOUTH.SW].y,
+  );
+
+  const widthDiff = Math.hypot(
+    landmarks[MOUTH.LEFT].x - landmarks[MOUTH.RIGHT].x,
+    landmarks[MOUTH.LEFT].y - landmarks[MOUTH.RIGHT].y,
+  );
+
+  // Avoid divide by 0
+  if (widthDiff === 0) return 0;
+
+  const score = (rightDiff + centerDiff + leftDiff) / (3 * widthDiff);
+
+  return { score, rightDiff, centerDiff, leftDiff, widthDiff };
+}
+
+
+function normLandmark(pt, landmarks) {
+  if (landmarks[pt]) {
+    return { x: landmarks[pt].x * canvas.width, y: landmarks[pt].y * canvas.height }
+  }
+  else {
+    return null;
+  }
+}
+
+function getFaceOutlineBox({ ctx, landmarks }) {
+  const origin = 10;
+  let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+  faceOutlinePts.forEach((pt) => {
+    const ptCoords = normLandmark(pt, landmarks);
+    minX = Math.min(minX, ptCoords.x);
+    minY = Math.min(minY, ptCoords.y);
+    maxX = Math.max(maxX, ptCoords.x);
+    maxY = Math.max(maxY, ptCoords.y);
+  });
+
+  return {
+    x: minX,
+    y: minY,
+    w: (maxX - minX),
+    h: (maxY - minY),
+  }
+
+  // ctx.beginPath();
+  // const originCoordinates = normLandmark(origin, landmarks);
+  // ctx.moveTo(originCoordinates.x, originCoordinates.y);
+  //
+  // faceOutlinePts.forEach((pt) => {
+  //   let ptCoords = normLandmark(pt, landmarks);
+  //   ctx.lineTo(ptCoords.x, ptCoords.y);
+  // });
+  //
+  // ctx.closePath();
+  // ctx.clip();
+}
+
+
+/* __________ @SEC: RUNNERS __________ */
+
+// Main entry
+async function run() {
+  // Ask for permission once so device labels are available
+  await navigator.mediaDevices.getUserMedia({ video: true });
+  await listCameras();
+  startActions();
+}
+
+// Called whenever FaceMesh has new results
+function onResults(results) {
+  const now = performance.now();
+  // ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw the mirrored image
+  // ctx.save()
+  // ctx.translate(canvas.width, 0);
+  // ctx.scale(-1, 1);
+  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  // ctx.restore()
+
+  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+    const landmarks = results.multiFaceLandmarks[0]; // one face only
+
+    drawMouthPoints({ ctx, landmarks });
+    // drawMoustacheEmoji(ctx, landmarks);
+
+    //Draw Eye line
+    // drawEyeLine(ctx, landmarks);
+    addTimer({ ctx, startTime: timerStart });
+
+
+    // Detect Smile
+    // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
+    const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
+    const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
+    drawFaceUpsideDown(ctx, landmarks);
+    // drawMouthOnly(ctx, landmarks, results.image);
+    // drawMultiFace(ctx, landmarks, results.image);
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
+    ctx.fillStyle = isSmiling ? 'lime' : 'red';
+    ctx.font = '20px Arial';
+    if (!score) return;
+    ctx.fillText(
+      `Smile: ${score.toFixed(2)} ${isSmiling ? '😄' : ''}`,
+      10,
+      30
+    );
+    ctx.fillText(
+      `rightDiff: ${rightDiff}\n`,
+      10,
+      50
+    );
+    ctx.fillText(
+      ` centerDiff: ${centerDiff}\n`,
+      10,
+      70
+    );
+    ctx.fillText(
+      ` leftDiff: ${leftDiff}\n`,
+      10,
+      90
+    );
+    ctx.fillText(
+      ` widthDiff: ${widthDiff}\n`,
+      10,
+      110
+    );
+    ctx.restore();
+
+
+    if (isSmiling) {
+      const cx = ((MOUTH.LEFT.x + MOUTH.RIGHT.x) / 2) * canvas.width;
+      const cy = MOUTH.UPPER_LIP.y * canvas.height - 10;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Undo mirror for correct text direction
+      ctx.fillStyle = 'lime';
+      ctx.fillText('Smile!', cx, cy);
+      ctx.restore();
+    }
+    // console.log(`smiling? ${isSmiling}`);
+    // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
+    addOverlay(ctx, landmarks, results.image, now);
+  }
+
+
+  // ctx.restore();
+}
+
+
+/* __________ @SEC: LANDMARK CONSTANTS __________ */
 
 //LANDMARK KEYPOINTS
 const MOUTH = {
@@ -46,33 +320,18 @@ const faceOutlinePts = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 28
   21, 54, 103, 67, 109,
 ];
 
-let camera = null;           // MediaPipe Camera helper
-let currentDeviceId = null;  // active camera id
 
-// Actions
-// const actions = [
-//   drawFaceWord,
-//   drawMoustacheEmoji,
-//   drawEyeLine,
-//   drawWord,
-// ];
+/* __________ @SEC: ACTION HELPERS __________ */
 
-// Redo Actions as objects
-const actions = [
-  { fn: drawFaceWord, config: { word: 'Hello' } },
-  { fn: drawMoustacheEmoji },
-  { fn: drawEyeLine },
-  { fn: drawWord, config: { word: 'Apples' } },
-];
-
-// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
-let showAction = false;
-let currentActionIndex = -1;
-
-let actionStartTime = 0;
-const actionDuration = 2_000;
-const actionInterval = 3_000;
-let timerStart = 0;
+function startActions() {
+  setInterval(() => {
+    // TODO: redo once decide on number of actions
+    currentActionIndex = (currentActionIndex + 1) % (actions.length);
+    console.log(`current action index: ${currentActionIndex}`);
+    showAction = true;
+    actionStartTime = performance.now();
+  }, actionInterval)
+}
 
 function addOverlay(ctx, landmarks, image, currentTime) {
   if (currentActionIndex > -1) {
@@ -94,33 +353,24 @@ function addOverlay(ctx, landmarks, image, currentTime) {
   }
 }
 
-function startActions() {
-  setInterval(() => {
-    // TODO: redo once decide on number of actions
-    currentActionIndex = (currentActionIndex + 1) % (actions.length);
-    console.log(`current action index: ${currentActionIndex}`);
-    showAction = true;
-    actionStartTime = performance.now();
-  }, actionInterval)
-}
+/* __________ @SEC: ACTIONS __________ */
 
-// List cameras and populate <select>
-async function listCameras() {
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  const cameras = devices.filter(d => d.kind === 'videoinput');
+const actions = [
+  { fn: drawFaceWord, config: { word: 'Hello' } },
+  { fn: drawMoustacheEmoji },
+  { fn: drawEyeLine },
+  { fn: drawWord, config: { word: 'Apples' } },
+];
 
-  cameraSelect.innerHTML = '';
-  cameras.forEach((cam, index) => {
-    const opt = document.createElement('option');
-    opt.value = cam.deviceId;
-    opt.textContent = cam.label || `Camera ${index + 1}`;
-    cameraSelect.appendChild(opt);
-  });
+// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
+let showAction = false;
+let currentActionIndex = -1;
 
-  if (cameras.length > 0 && !currentDeviceId) {
-    currentDeviceId = cameras[0].deviceId;
-  }
-}
+let actionStartTime = 0;
+const actionDuration = 2_000;
+const actionInterval = 3_000;
+let timerStart = 0;
+
 
 let lastAngle = 0;
 
@@ -189,237 +439,6 @@ function drawEyeLine({ ctx, landmarks }) {
   ctx.linewidth = 2;
   ctx.strokeStyle = "red";
   ctx.stroke();
-
-}
-
-
-// Get the Euclidane distance between two points
-// The points should have an x and y property
-function eucDist(p1, p2) {
-  return Math.hypot(p1.x - p2.x, p1.y - p2.y);
-}
-
-
-// mouthConfidence = clamp(1.0 - (mouthJitter / JITTER_MAX), 0, 1) * shapeScore;
-//     const mouthLandmarkHistory = {
-//   61: [], // array of {x, y} points for landmark 61
-//   291: [], 
-//   13: [], 
-//   14: []
-// };
-
-// Update history with latest points elsewhere when frame arrives
-// Here dataPerFrame is {61: {x,y}, 291: {x,y}, ...}
-
-// function computeMouthJitter(mouthLandmarkHistory, currentFramePoints) {
-//   const landmarkIndices = [61, 291, 13, 14];
-//   let totalDist = 0;
-//   let count = 0;
-//
-//   landmarkIndices.forEach(i => {
-//     const history = mouthLandmarkHistory[i];
-//     if (history.length > 0) {
-//       const lastPoint = history[history.length - 1];
-//       totalDist += euclideanDist(currentFramePoints[i], lastPoint);
-//       count++;
-//     }
-//     history.push(currentFramePoints[i]);
-//     // limit history size to last M frames
-//     if (history.length > 10) history.shift();
-//   });
-//
-//   if (count === 0) return 0;
-//   return totalDist / count;
-// }
-
-// Called whenever FaceMesh has new results
-function onResults(results) {
-  const now = performance.now();
-  // ctx.save();
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw the mirrored image
-  // ctx.save()
-  // ctx.translate(canvas.width, 0);
-  // ctx.scale(-1, 1);
-  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-  // ctx.restore()
-
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    const landmarks = results.multiFaceLandmarks[0]; // one face only
-
-    drawMouthPoints({ ctx, landmarks });
-    // drawMoustacheEmoji(ctx, landmarks);
-
-    //Draw Eye line
-    // drawEyeLine(ctx, landmarks);
-    addTimer({ ctx, startTime: timerStart });
-
-
-    // Detect Smile
-    // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
-    const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
-    const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
-    // drawFaceUpsideDown(ctx, landmarks);
-    // drawMouthOnly(ctx, landmarks, results.image);
-    // drawMultiFace(ctx, landmarks, results.image);
-
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
-    ctx.fillStyle = isSmiling ? 'lime' : 'red';
-    ctx.font = '20px Arial';
-    if (!score) return;
-    ctx.fillText(
-      `Smile: ${score.toFixed(2)} ${isSmiling ? '😄' : ''}`,
-      10,
-      30
-    );
-    ctx.fillText(
-      `rightDiff: ${rightDiff}\n`,
-      10,
-      50
-    );
-    ctx.fillText(
-      ` centerDiff: ${centerDiff}\n`,
-      10,
-      70
-    );
-    ctx.fillText(
-      ` leftDiff: ${leftDiff}\n`,
-      10,
-      90
-    );
-    ctx.fillText(
-      ` widthDiff: ${widthDiff}\n`,
-      10,
-      110
-    );
-    ctx.restore();
-
-
-    if (isSmiling) {
-      const cx = ((MOUTH.LEFT.x + MOUTH.RIGHT.x) / 2) * canvas.width;
-      const cy = MOUTH.UPPER_LIP.y * canvas.height - 10;
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0); // Undo mirror for correct text direction
-      ctx.fillStyle = 'lime';
-      ctx.fillText('Smile!', cx, cy);
-      ctx.restore();
-    }
-    // console.log(`smiling? ${isSmiling}`);
-    // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
-    addOverlay(ctx, landmarks, results.image, now);
-  }
-
-
-  // ctx.restore();
-}
-
-
-// Start MediaPipe camera for a given deviceId
-async function startCamera(deviceId) {
-  if (camera) {
-    camera.stop();
-    camera = null;
-  }
-
-  currentDeviceId = deviceId;
-
-  // MediaPipe Camera util accepts a video element and onFrame callback
-  camera = new Camera(videoElement, {
-    onFrame: async () => {
-      await faceMesh.send({ image: videoElement });
-    },
-    width: 640,
-    height: 480,
-    facingMode: 'user',
-    deviceId: deviceId, // custom field; many people pass through constraints here
-  });
-
-  camera.start();
-}
-
-// Simple wrappers for buttons
-function handleStart() {
-  const selectedId = cameraSelect.value || currentDeviceId;
-  if (selectedId) startCamera(selectedId);
-  timerStart = performance.now();
-}
-
-function handleStop() {
-  if (camera) {
-    camera.stop();
-    camera = null;
-  }
-}
-
-
-function getSmileScore(landmarks) {
-  // const dx = landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x;
-  // const dy = landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y;
-  // const mouthWidth = Math.sqrt(dx * dx + dy * dy);
-
-  // Original Calc
-  // const mouthWidth = Math.hypot(
-  //   landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x,
-  //   landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y
-  // );
-  //
-  // const mouthHeight = Math.hypot(
-  //   landmarks[MOUTH.UPPER_LIP].x - landmarks[MOUTH.LOWER_LIP].x,
-  //   landmarks[MOUTH.UPPER_LIP].y - landmarks[MOUTH.LOWER_LIP].y,
-  // );
-
-
-  // MAR
-  const rightDiff = Math.hypot(
-    landmarks[MOUTH.NE].x - landmarks[MOUTH.SE].x,
-    landmarks[MOUTH.NE].y - landmarks[MOUTH.SE].y,
-  );
-
-  const centerDiff = Math.hypot(
-    landmarks[MOUTH.N].x - landmarks[MOUTH.S].x,
-    landmarks[MOUTH.N].y - landmarks[MOUTH.S].y,
-  );
-
-  const leftDiff = Math.hypot(
-    landmarks[MOUTH.NW].x - landmarks[MOUTH.SW].x,
-    landmarks[MOUTH.NW].y - landmarks[MOUTH.SW].y,
-  );
-
-  const widthDiff = Math.hypot(
-    landmarks[MOUTH.LEFT].x - landmarks[MOUTH.RIGHT].x,
-    landmarks[MOUTH.LEFT].y - landmarks[MOUTH.RIGHT].y,
-  );
-
-  // Avoid divide by 0
-  if (widthDiff === 0) return 0;
-
-  // const score = mouthWidth / mouthHeight;
-  // const score = mouthHeight / mouthWidth;
-
-  const score = (rightDiff + centerDiff + leftDiff) / (3 * widthDiff);
-
-
-  // return { score, mouthWidth, mouthHeight };
-  return { score, rightDiff, centerDiff, leftDiff, widthDiff };
-}
-
-// When camera selection changes, restart with new device
-cameraSelect.addEventListener('change', () => {
-  const selectedId = cameraSelect.value;
-  if (selectedId) startCamera(selectedId);
-});
-
-btnStart.addEventListener('click', handleStart);
-btnStop.addEventListener('click', handleStop);
-
-// Main entry
-async function run() {
-  // Ask for permission once so device labels are available
-  await navigator.mediaDevices.getUserMedia({ video: true });
-  await listCameras();
-  startActions();
 }
 
 function drawFaceUpsideDown(ctx, landmarks) {
@@ -457,6 +476,8 @@ function drawFaceUpsideDown(ctx, landmarks) {
   faceOutlinePts.forEach((pt) => {
     let ptCoords = normLandmark(pt, landmarks);
     if (pt === origin) {
+      console.log(`ptCoords.x : ${ptCoords.x}, ptCoords.y : ${ptCoords.y}`);
+      console.log(`x : ${x}, y : ${y}`);
       ctx.moveTo(ptCoords.x - x, ptCoords.y - y);
     }
     else {
@@ -479,46 +500,6 @@ function drawFaceUpsideDown(ctx, landmarks) {
   ctx.restore();
 }
 
-function normLandmark(pt, landmarks) {
-  if (landmarks[pt]) {
-    return { x: landmarks[pt].x * canvas.width, y: landmarks[pt].y * canvas.height }
-  }
-  else {
-    return null;
-  }
-}
-
-function getFaceOutlineBox({ ctx, landmarks }) {
-  const origin = 10;
-  let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
-
-  faceOutlinePts.forEach((pt) => {
-    const ptCoords = normLandmark(pt, landmarks);
-    minX = Math.min(minX, ptCoords.x);
-    minY = Math.min(minY, ptCoords.y);
-    maxX = Math.max(maxX, ptCoords.x);
-    maxY = Math.max(maxY, ptCoords.y);
-  });
-
-  return {
-    x: minX,
-    y: minY,
-    w: (maxX - minX),
-    h: (maxY - minY),
-  }
-
-  // ctx.beginPath();
-  // const originCoordinates = normLandmark(origin, landmarks);
-  // ctx.moveTo(originCoordinates.x, originCoordinates.y);
-  //
-  // faceOutlinePts.forEach((pt) => {
-  //   let ptCoords = normLandmark(pt, landmarks);
-  //   ctx.lineTo(ptCoords.x, ptCoords.y);
-  // });
-  //
-  // ctx.closePath();
-  // ctx.clip();
-}
 
 function drawMultiFace({ ctx, landmarks, image }) {
   const faceOutlineBox = getFaceOutlineBox({ ctx, landmarks });
@@ -640,5 +621,42 @@ function addTimer({ ctx, startTime }) {
   ctx.restore();
 }
 
+/* __________ @SEC: RUN __________ */
 run();
+
+
+/* __________ @SEC: TODO / ARCHIVE JITTER __________ */
+
+
+// mouthConfidence = clamp(1.0 - (mouthJitter / JITTER_MAX), 0, 1) * shapeScore;
+//     const mouthLandmarkHistory = {
+//   61: [], // array of {x, y} points for landmark 61
+//   291: [], 
+//   13: [], 
+//   14: []
+// };
+
+// Update history with latest points elsewhere when frame arrives
+// Here dataPerFrame is {61: {x,y}, 291: {x,y}, ...}
+
+// function computeMouthJitter(mouthLandmarkHistory, currentFramePoints) {
+//   const landmarkIndices = [61, 291, 13, 14];
+//   let totalDist = 0;
+//   let count = 0;
+//
+//   landmarkIndices.forEach(i => {
+//     const history = mouthLandmarkHistory[i];
+//     if (history.length > 0) {
+//       const lastPoint = history[history.length - 1];
+//       totalDist += euclideanDist(currentFramePoints[i], lastPoint);
+//       count++;
+//     }
+//     history.push(currentFramePoints[i]);
+//     // limit history size to last M frames
+//     if (history.length > 10) history.shift();
+//   });
+//
+//   if (count === 0) return 0;
+//   return totalDist / count;
+// }
 
