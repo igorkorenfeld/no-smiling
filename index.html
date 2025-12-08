@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FaceMesh Single Face</title>
+  <style>
+    video { display: none; }
+    canvas { transform: scaleX(-1); } /* mirror to feel natural */
+  </style>
+
+  <!-- MediaPipe core + camera utils + FaceMesh -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+</head>
+<body>
+  <select id="camera-select"></select>
+  <button id="video__start">Start</button>
+  <button id="video__stop">Stop</button>
+
+  <video id="video" class="input_video" playsinline></video>
+  <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+
