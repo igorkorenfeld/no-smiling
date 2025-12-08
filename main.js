@@ -254,7 +254,7 @@ function makeFacePath(ctx, landmarks, offset = { x: 0, y: 0 }) {
   // console.log("Stroked");
 }
 
-function getOrbitAngle(startTime, radiansPerSecond = Math.PI / 3) {
+function getOrbitAngle(startTime, radiansPerSecond = Math.PI * 2 / 4) {
   const elapsed = (performance.now() - startTime) / 1_000;
   return (radiansPerSecond * elapsed % Math.PI * 2);
 };
@@ -300,39 +300,39 @@ function onResults(results) {
     // drawFaceUpsideDown(ctx, landmarks);
     // drawMouthOnly(ctx, landmarks, results.image);
     // drawMultiFace(ctx, landmarks, results.image);
-    draw3DOrbitingImage({ ctx, landmarks, startTime: timerStart });
+    // draw3DOrbitingImage({ ctx, landmarks, startTime: timerStart });
 
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
-    ctx.fillStyle = isSmiling ? 'lime' : 'red';
-    ctx.font = '20px Arial';
+    // ctx.save();
+    // ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
+    // ctx.fillStyle = isSmiling ? 'lime' : 'red';
+    // ctx.font = '20px Arial';
     if (!score) return;
-    ctx.fillText(
-      `Smile: ${score.toFixed(2)} ${isSmiling ? '😄' : ''}`,
-      10,
-      30
-    );
-    ctx.fillText(
-      `rightDiff: ${rightDiff}\n`,
-      10,
-      50
-    );
-    ctx.fillText(
-      ` centerDiff: ${centerDiff}\n`,
-      10,
-      70
-    );
-    ctx.fillText(
-      ` leftDiff: ${leftDiff}\n`,
-      10,
-      90
-    );
-    ctx.fillText(
-      ` widthDiff: ${widthDiff}\n`,
-      10,
-      110
-    );
-    ctx.restore();
+    // ctx.fillText(
+    //   `Smile: ${score.toFixed(2)} ${isSmiling ? '😄' : ''}`,
+    //   10,
+    //   30
+    // );
+    // ctx.fillText(
+    //   `rightDiff: ${rightDiff}\n`,
+    //   10,
+    //   50
+    // );
+    // ctx.fillText(
+    //   ` centerDiff: ${centerDiff}\n`,
+    //   10,
+    //   70
+    // );
+    // ctx.fillText(
+    //   ` leftDiff: ${leftDiff}\n`,
+    //   10,
+    //   90
+    // );
+    // ctx.fillText(
+    //   ` widthDiff: ${widthDiff}\n`,
+    //   10,
+    //   110
+    // );
+    // ctx.restore();
 
 
     if (isSmiling) {
@@ -385,21 +385,26 @@ function startActions() {
     console.log(`current action index: ${currentActionIndex}`);
     showAction = true;
     actionStartTime = performance.now();
-  }, actionInterval)
+  }, ACTION_INTERVAL)
 }
 
 function addOverlay(ctx, landmarks, image, currentTime) {
-  if (currentActionIndex > -1) {
-    // console.log(currentTime);
-    // console.log("drawing action");
-    const action = actions[currentActionIndex];
-    if (action.config) {
-      action.fn({ ctx, landmarks, image, ...action.config });
-    }
-    else {
-      action.fn({ ctx, landmarks, image });
-    }
+
+  const DEFAULT_DURATION = 2_000;
+
+  if (currentActionIndex < 0 || !showAction) return;
+
+  // console.log(currentTime);
+  // console.log("drawing action");
+  const action = actions[currentActionIndex];
+
+  if (action.config) {
+    action.fn({ ctx, landmarks, image, ...action.config });
   }
+  else {
+    action.fn({ ctx, landmarks, image });
+  }
+  const actionDuration = action.duration ?? DEFAULT_DURATION;
 
   if ((currentTime - actionStartTime) > actionDuration) {
     // console.log(currentTime);
@@ -411,11 +416,12 @@ function addOverlay(ctx, landmarks, image, currentTime) {
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  { fn: drawFaceWord, config: { word: 'Hello' } },
+  { fn: drawFaceWord, config: { word: 'Sus' } },
   { fn: drawMoustacheEmoji },
   { fn: drawEyeLine },
-  { fn: drawWord, config: { word: 'Apples' } },
-  { fn: drawOrbitingImage, config: { startTime: performance.now() } },
+  { fn: drawWord, config: { word: 'MOIST' } },
+  { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
 ];
 
 // TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
@@ -423,12 +429,10 @@ let showAction = false;
 let currentActionIndex = -1;
 
 let actionStartTime = 0;
-const actionDuration = 2_000;
-const actionInterval = 3_000;
+const ACTION_INTERVAL = 5_000;
 let timerStart = 0;
 
 
-let lastAngle = 0;
 
 function drawMoustacheEmoji({ ctx, landmarks }) {
   ctx.font = '40px Arial';
@@ -447,7 +451,7 @@ function drawMoustacheEmoji({ ctx, landmarks }) {
 }
 
 function drawFaceWord({ ctx, landmarks, word }) {
-  const foreheadPoint = landmarks[9];
+  const foreheadPoint = landmarks[151];
   const foreheadX = foreheadPoint.x * canvas.width;
   const foreheadY = foreheadPoint.y * canvas.height;
   const dy = landmarks[33].y * canvas.height - landmarks[263].y * canvas.height;
@@ -461,7 +465,7 @@ function drawFaceWord({ ctx, landmarks, word }) {
   ctx.rotate(angleRadians);
   ctx.scale(-1, -1);
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'bottom';
   ctx.fillText(word, 0, 0);
   // ctx.fillText(lastAngle.toFixed(2), 0, 0);
   ctx.restore();
@@ -677,18 +681,19 @@ function addTimer({ ctx, startTime }) {
   ctx.restore();
 }
 
-function drawOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) {
+function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
   console.log(angle);
+  const RADIUS_SCALE = 0.6;
 
-  const mx = cx + r * Math.cos(angle);
-  const my = cy + r * Math.sin(angle);
+  const mx = cx + r * Math.cos(angle) * RADIUS_SCALE;
+  const my = cy + r * Math.sin(angle) * RADIUS_SCALE;
   console.log(startTime);
   console.log(`mx: ${mx}, my:${my}`)
 
   ctx.save();
-  ctx.font = "32px system-ui";
+  ctx.font = "58px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(moon, mx, my);
