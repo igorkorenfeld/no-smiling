@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FaceMesh Single Face</title>
+  <link rel="stylesheet" type="text/css" href="styles.css" />
   <style>
     video { display: none; }
     canvas { transform: scaleX(1); } /* mirror to feel natural */
@@ -19,7 +21,9 @@
   <button id="video__stop">Stop</button>
 
   <video id="video" class="input_video" playsinline></video>
-  <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
+    <div class="canvas__container">
+      <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
+    </div>
 
   <script type="module" src="./main.js"></script>
 </body>
