@@ -34,18 +34,22 @@ let camera = null;           // MediaPipe Camera helper
 let currentDeviceId = null;  // active camera id
 
 // Actions
-const actions = [
-  drawFaceWord,
-  drawMoustacheEmoji,
-  drawEyeLine,
-  drawWord,
-];
-// // Redo Actions as objects
 // const actions = [
-//   { fn: drawFaceWord, config: 'Hello' },
-//   { fn: drawMoustacheEmoji },
-//   { fn: drawEyeLine },
+//   drawFaceWord,
+//   drawMoustacheEmoji,
+//   drawEyeLine,
+//   drawWord,
 // ];
+
+// Redo Actions as objects
+const actions = [
+  // { fn: drawFaceWord, config: { word: 'Hello' } },
+  // { fn: drawMoustacheEmoji },
+  // { fn: drawEyeLine },
+  { fn: drawWord, config: { word: 'Apples' } },
+];
+
+// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
 let showAction = false;
 let currentActionIndex = -1;
 
@@ -53,11 +57,17 @@ let actionStartTime = 0;
 const actionDuration = 2_000;
 const actionInterval = 3_000;
 
-function addOverlay(ctx, landmarks, currentTime) {
+function addOverlay(ctx, landmarks, image, currentTime) {
   if (currentActionIndex > -1) {
     // console.log(currentTime);
     // console.log("drawing action");
-    actions[currentActionIndex](ctx, landmarks, 'Hello');
+    const action = actions[currentActionIndex];
+    if (action.config) {
+      action.fn({ ctx, landmarks, image, ...action.config });
+    }
+    else {
+      action.fn({ ctx, landmarks, image });
+    }
   }
 
   if ((currentTime - actionStartTime) > actionDuration) {
@@ -97,7 +107,7 @@ async function listCameras() {
 
 let lastAngle = 0;
 
-function drawMoustacheEmoji(ctx, landmarks) {
+function drawMoustacheEmoji({ ctx, landmarks }) {
   ctx.font = '40px Arial';
   const moustachePoint = landmarks[2];
   const moustacheX = moustachePoint.x * canvas.width;
@@ -113,7 +123,7 @@ function drawMoustacheEmoji(ctx, landmarks) {
   ctx.fillText('🥸', moustacheX, moustacheY);
 }
 
-function drawFaceWord(ctx, landmarks, word) {
+function drawFaceWord({ ctx, landmarks, word }) {
   const foreheadPoint = landmarks[9];
   const foreheadX = foreheadPoint.x * canvas.width;
   const foreheadY = foreheadPoint.y * canvas.height;
@@ -135,7 +145,7 @@ function drawFaceWord(ctx, landmarks, word) {
 }
 
 // Draw landmarks as small circles
-function drawMouthPoints(ctx, landmarks) {
+function drawMouthPoints({ ctx, landmarks }) {
   ctx.font = '10px Arial';
   ctx.fillStyle = 'purple';
 
@@ -149,7 +159,7 @@ function drawMouthPoints(ctx, landmarks) {
   })
 }
 
-function drawEyeLine(ctx, landmarks) {
+function drawEyeLine({ ctx, landmarks }) {
   ctx.beginPath();
 
   // Set a start-point
@@ -221,7 +231,7 @@ function onResults(results) {
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const landmarks = results.multiFaceLandmarks[0]; // one face only
 
-    drawMouthPoints(ctx, landmarks);
+    drawMouthPoints({ ctx, landmarks });
     // drawMoustacheEmoji(ctx, landmarks);
 
     //Draw Eye line
@@ -232,7 +242,7 @@ function onResults(results) {
     // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
     const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
     const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
-    drawFaceUpsideDown(ctx, landmarks);
+    // drawFaceUpsideDown(ctx, landmarks);
     // drawMouthOnly(ctx, landmarks, results.image);
     // drawMultiFace(ctx, landmarks, results.image);
 
@@ -280,7 +290,7 @@ function onResults(results) {
     }
     // console.log(`smiling? ${isSmiling}`);
     // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
-    addOverlay(ctx, landmarks, now);
+    addOverlay(ctx, landmarks, results.image, now);
   }
 
 
@@ -416,7 +426,6 @@ function drawFaceUpsideDown(ctx, landmarks) {
     if (pt.y < minY) minY = pt.y;
     if (pt.y > maxY) maxY = pt.y;
   });
-  console.log(`minX: ${minX}, minY: ${minY}, maxX: ${maxX},maxY: ${maxY}`);
   const x = minX * canvas.width;
   const y = minY * canvas.height;
   const width = (maxX - minX) * canvas.width;
@@ -474,13 +483,12 @@ function normLandmark(pt, landmarks) {
   }
 }
 
-function getFaceOutlineBox(ctx, landmarks) {
+function getFaceOutlineBox({ ctx, landmarks }) {
   const origin = 10;
   let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
 
   faceOutlinePts.forEach((pt) => {
     const ptCoords = normLandmark(pt, landmarks);
-    // console.log(ptCoords);
     minX = Math.min(minX, ptCoords.x);
     minY = Math.min(minY, ptCoords.y);
     maxX = Math.max(maxX, ptCoords.x);
@@ -507,13 +515,12 @@ function getFaceOutlineBox(ctx, landmarks) {
   // ctx.clip();
 }
 
-function drawMultiFace(ctx, landmarks, image) {
-  const faceOutlineBox = getFaceOutlineBox(ctx, landmarks);
+function drawMultiFace({ ctx, landmarks, image }) {
+  const faceOutlineBox = getFaceOutlineBox({ ctx, landmarks });
   const offsets = [-1, 1];
   const padding = 25;
   offsets.forEach((offset) => {
     const destX = faceOutlineBox.x + (offset * (faceOutlineBox.w + (padding)));
-    console.log(destX);
     // if (cloneX + faceOutlineBox.w < 0 || cloneX + faceOutlineBox.w > canvas.width) return;
     ctx.save();
     ctx.translate(destX, faceOutlineBox.y);
@@ -546,7 +553,7 @@ function drawMultiFace(ctx, landmarks, image) {
 
 }
 
-function drawMouthOnly(ctx, landmarks, image) {
+function drawMouthOnly({ ctx, landmarks, image }) {
   // const detailedMouthLandmarks = [
   //   291, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 323, 361, 291
   // ];
@@ -590,30 +597,28 @@ function drawMouthOnly(ctx, landmarks, image) {
 //
 // }
 
-function drawWord(ctx, word = "apples") {
+function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.save();
   ctx.font = '24px Arial';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
   const padding = 16;
-  const textWidth = ctx.measureText(word);
+  const textWidth = ctx.measureText(word).width;
+  console.log("textWidth");
+  console.log(textWidth);
   const boxWidth = textWidth + (padding * 2);
-  const boxHeight = 8;
+  const boxHeight = 40;
   const boxPosition = {
     x: (canvas.width / 2) - (textWidth / 2) - padding,
     y: 0,
   }
 
-  ctx.fillStyle = 'rgba(0, 0, 0, .24)';
-  ctx.fillRect = (boxPosition.x, boxPosition.y, boxWidth, boxHeight);
-  // ctx.fillText(word, boxPosition.x + padding, boxPosition.y + padding);
   ctx.fillStyle = 'white';
-  ctx.fillText(word, 10, 10);
+  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+  ctx.fillText(word, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
 
   ctx.restore();
-
-
 }
 
 run();
