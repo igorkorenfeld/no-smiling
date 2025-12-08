@@ -1,8 +1,8 @@
 /* __________ @SEC: TODO IMPORTS __________ */
 // 
-// import { FaceMesh } from '@mediapipe/face_mesh';
-// import { Camera } from '@mediapipe/camera_utils';
-// import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+import { FaceMesh } from '@mediapipe/face_mesh';
+import { Camera } from '@mediapipe/camera_utils';
+import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 //npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
 
 /* __________ @SEC: DOM CONSTANTS __________ */
@@ -21,7 +21,8 @@ const btnStop = document.getElementById('video__stop');
 // Initialize FaceMesh solution
 const faceMesh = new FaceMesh({
   locateFile: (file) =>
-    `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    // `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    `./node_modules/@mediapipe/face_mesh/${file}`
 });
 
 faceMesh.setOptions({
