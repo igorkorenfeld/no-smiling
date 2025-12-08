@@ -59,9 +59,9 @@ let currentDeviceId = null;  // active camera id
 
 // Redo Actions as objects
 const actions = [
-  // { fn: drawFaceWord, config: { word: 'Hello' } },
-  // { fn: drawMoustacheEmoji },
-  // { fn: drawEyeLine },
+  { fn: drawFaceWord, config: { word: 'Hello' } },
+  { fn: drawMoustacheEmoji },
+  { fn: drawEyeLine },
   { fn: drawWord, config: { word: 'Apples' } },
 ];
 
@@ -72,6 +72,7 @@ let currentActionIndex = -1;
 let actionStartTime = 0;
 const actionDuration = 2_000;
 const actionInterval = 3_000;
+let timerStart = 0;
 
 function addOverlay(ctx, landmarks, image, currentTime) {
   if (currentActionIndex > -1) {
@@ -252,6 +253,7 @@ function onResults(results) {
 
     //Draw Eye line
     // drawEyeLine(ctx, landmarks);
+    addTimer({ ctx, startTime: timerStart });
 
 
     // Detect Smile
@@ -341,6 +343,7 @@ async function startCamera(deviceId) {
 function handleStart() {
   const selectedId = cameraSelect.value || currentDeviceId;
   if (selectedId) startCamera(selectedId);
+  timerStart = performance.now();
 }
 
 function handleStop() {
@@ -617,6 +620,22 @@ function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.fillStyle = 'white';
   ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
   ctx.fillText(word, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
+
+  ctx.restore();
+}
+
+function addTimer({ ctx, startTime }) {
+  const elasped = performance.now() - startTime;
+  const seconds = Math.floor(elasped / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
+  const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+
+  ctx.save();
+  ctx.font = '10px Arial';
+  ctx.fillStyle = 'white';
+  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+  ctx.fillText(text, canvas.width - ctx.measureText(text).width - 20, canvas.height - 20);
 
   ctx.restore();
 }
