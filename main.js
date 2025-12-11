@@ -8,12 +8,23 @@ import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 /* __________ @SEC: DOM CONSTANTS __________ */
 
 const videoElement = document.getElementById('video');
-const canvas = document.getElementById('c1');
+let canvas = document.getElementById('c1');
 const ctx = canvas.getContext('2d');
 const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
 
+/* __________ @SEC: GAMESTATE  __________ */
+const gameConfig = {
+  smileLimit: 3,
+}
+
+const gameState = {
+  smileCount: 0,
+  timeCutOff: false,
+  activeSmile: false,
+  gameOver: false,
+}
 
 /* __________ @SEC: FaceMesh INIT __________ */
 /* Doing this early to help with page load */
@@ -259,6 +270,7 @@ function getOrbitAngle(startTime, radiansPerSecond = Math.PI * 2 / 4) {
   return (radiansPerSecond * elapsed % Math.PI * 2);
 };
 
+
 /* __________ @SEC: RUNNERS __________ */
 
 // Main entry
@@ -271,6 +283,7 @@ async function run() {
 
 // Called whenever FaceMesh has new results
 function onResults(results) {
+  canvas = document.getElementById('c1');
   const now = performance.now();
   // ctx.save();
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -285,7 +298,8 @@ function onResults(results) {
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const landmarks = results.multiFaceLandmarks[0]; // one face only
 
-    drawMouthPoints({ ctx, landmarks });
+
+    // drawMouthPoints({ ctx, landmarks });
     // drawMoustacheEmoji(ctx, landmarks);
 
     //Draw Eye line
@@ -297,6 +311,8 @@ function onResults(results) {
     // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
     const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
     const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
+
+    //Extract to handle smile
     // drawFaceUpsideDown(ctx, landmarks);
     // drawMouthOnly(ctx, landmarks, results.image);
     // drawMultiFace(ctx, landmarks, results.image);
@@ -344,6 +360,14 @@ function onResults(results) {
       ctx.fillText('Smile!', cx, cy);
       ctx.restore();
     }
+
+    handleSmile(isSmiling);
+    if (gameState.gameOver) {
+      handleGameOver();
+    };
+
+
+
     // console.log(`smiling? ${isSmiling}`);
     // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
     addOverlay(ctx, landmarks, results.image, now);
@@ -351,6 +375,30 @@ function onResults(results) {
 
 
   // ctx.restore();
+}
+
+function handleSmile(isSimling) {
+
+  if (isSimling) {
+    if (!gameState.activeSmile) {
+      gameState.smileCount++;
+    }
+  }
+  gameState.activeSmile = isSimling;
+
+}
+
+function updateGameOverState() {
+  //Case 1 smile counts
+  //Case 2 smile after cutoff time
+  //Case 3 time is up
+  if (gameState.smileCount > gameConfig.smileLimit) {
+    gameState.gameOver = true;
+  }
+}
+
+function handleGameOver() {
+  console.log("Game over");
 }
 
 
@@ -652,7 +700,6 @@ function drawWord({ ctx, word = 'Pineapple' } = {}) {
   const padding = 16;
   const textWidth = ctx.measureText(word).width;
   const boxWidth = textWidth + (padding * 2);
-  const boxHeight = 40;
   const boxPosition = {
     x: (canvas.width / 2) - (textWidth / 2) - padding,
     y: 0,
@@ -673,24 +720,23 @@ function addTimer({ ctx, startTime }) {
   const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   ctx.save();
-  ctx.font = '10px Arial';
+  ctx.font = '20px Arial';
   ctx.fillStyle = 'white';
   ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
-  ctx.fillText(text, canvas.width - ctx.measureText(text).width - 20, canvas.height - 20);
+  // ctx.textAlign = 'center';
+  ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
 
   ctx.restore();
+  console.log(text);
 }
 
 function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
-  console.log(angle);
   const RADIUS_SCALE = 0.6;
 
   const mx = cx + r * Math.cos(angle) * RADIUS_SCALE;
   const my = cy + r * Math.sin(angle) * RADIUS_SCALE;
-  console.log(startTime);
-  console.log(`mx: ${mx}, my:${my}`)
 
   ctx.save();
   ctx.font = "58px system-ui";
@@ -703,7 +749,6 @@ function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
 function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
-  console.log(angle);
 
   const mx = cx + r * Math.cos(angle);
   const my = cy + r * Math.sin(angle) * -0.2; // Flatten to a smaller radius
@@ -711,9 +756,6 @@ function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) 
   const t = (Math.sin(angle) + 1) / 2 // Normalize from -1>1 to 0>1
   const scale = 0.2 + 0.8 * t // Scale from 0.2 to 1
 
-  console.log(startTime);
-  console.log(`mx: ${mx}, my:${my}`)
-  console.log(`t: ${t}, scale: ${scale}`)
 
   const baseSize = 52;
   const scaledSize = baseSize * scale;
@@ -726,7 +768,6 @@ function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) 
   ctx.fillText(moon, mx, my);
   ctx.restore();
   if (Math.sin(angle) < 0) {
-    console.log("behind");
     ctx.save();
     makeFacePath(ctx, landmarks);
     ctx.clip();
@@ -745,11 +786,19 @@ function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) 
     ctx.restore();
     // ctx.globalCompositeOperation = 'source-over';
   }
-
-  else {
-    console.log("in front");
-  }
 }
+
+//
+// function previousFaces({ ctx, landmarks, image, prevCanvas, prevCtx, preFacebox }) {
+//   const faceBox = getFaceOutlineBox({ ctx, landmarks });
+//
+//   if (!prevCanvas) {
+//     prevCanvas = document.createElement('canvas');
+//     prevCtx = prevCanvas.getContext('2d');
+//
+//
+//   }
+// }
 
 /* __________ @SEC: RUN __________ */
 run();
