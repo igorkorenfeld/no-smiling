@@ -236,6 +236,8 @@ async function run() {
   startActions();
 }
 
+const tempAction = createPreviousFaceAction();
+
 // Called whenever FaceMesh has new results
 function onResults(results) {
   canvas = document.getElementById('c1');
@@ -260,6 +262,7 @@ function onResults(results) {
     //Draw Eye line
     // drawEyeLine(ctx, landmarks);
     addTimer({ ctx, startTime: timerStart });
+    tempAction({ ctx, landmarks, image: results.image, });
 
 
     // Detect Smile
@@ -671,17 +674,68 @@ function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) 
   }
 }
 
-//
-// function previousFaces({ ctx, landmarks, image, prevCanvas, prevCtx, preFacebox }) {
-//   const faceBox = getFaceOutlineBox({ ctx, landmarks });
-//
-//   if (!prevCanvas) {
-//     prevCanvas = document.createElement('canvas');
-//     prevCtx = prevCanvas.getContext('2d');
-//
-//
-//   }
-// }
+
+function createPreviousFaceAction() {
+  const state = {
+    prevCanvas: null,
+    prevCtx: null,
+    prevFaceBox: null,
+    lastFrameTime: null,
+  }
+
+  return function drawPreviousFaces({ ctx, landmarks, image, }) {
+    const faceBox = getFaceOutlineBox({ ctx, landmarks });
+    const FRAME_INTERVAL = 62;
+
+    if (!state.prevCanvas) {
+      state.prevCanvas = document.createElement('canvas');
+      state.prevCtx = state.prevCanvas.getContext('2d');
+      state.prevCanvas.width = canvas.width;
+      state.prevCanvas.height = canvas.height;
+    }
+
+    if (!state.lastFrameTime || performance.now() - state.lastFrameTime > FRAME_INTERVAL) {
+      state.prevCtx.save();
+      state.prevCtx.globalAlpha = 0.65;
+
+      makeFacePath(state.prevCtx, landmarks);
+      state.prevCtx.clip();
+
+      state.prevCtx.drawImage(
+        image,
+        faceBox.x, faceBox.y, faceBox.w, faceBox.h,
+        faceBox.x, faceBox.y, faceBox.w, faceBox.h
+      );
+      state.prevCtx.restore();
+
+      state.prevFaceBox = faceBox;
+      state.lastFrameTime = performance.now();
+    }
+
+
+    if (state.prevFaceBox && state.prevCanvas.width > 0) {
+      const c2 = document.getElementById('c2');
+      const ctx2 = c2.getContext("2d");
+      // ctx.fillStyle = "red";
+      // ctx.fillRect(0, 0, 200, 200);
+      ctx.save();
+      ctx.globalAlpha = 0.8;
+      // ctx.drawImage(
+      //   state.prevCanvas,
+      //   state.prevFaceBox.x, state.prevFaceBox.y,
+      //   state.prevFaceBox.w, state.prevFaceBox.h
+      // );
+      // ctx.drawImage(
+      //   state.prevCanvas,
+      //   state.prevFaceBox.x + 20, state.prevFaceBox.y + 20,
+      //   state.prevFaceBox.w, state.prevFaceBox.h
+      // );
+      ctx.drawImage(state.prevCanvas, 0, 0);
+      ctx.restore();
+    }
+  }
+}
+
 
 /* __________ @SEC: RUN __________ */
 run();
