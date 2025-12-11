@@ -133,25 +133,6 @@ function eucDist(p1, p2) {
 }
 
 function getSmileScore(landmarks) {
-  // const dx = landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x;
-  // const dy = landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y;
-  // const mouthWidth = Math.sqrt(dx * dx + dy * dy);
-
-  // Original Calc
-  // const mouthWidth = Math.hypot(
-  //   landmarks[MOUTH.RIGHT].x - landmarks[MOUTH.LEFT].x,
-  //   landmarks[MOUTH.RIGHT].y - landmarks[MOUTH.LEFT].y
-  // );
-  //
-  // const mouthHeight = Math.hypot(
-  //   landmarks[MOUTH.UPPER_LIP].x - landmarks[MOUTH.LOWER_LIP].x,
-  //   landmarks[MOUTH.UPPER_LIP].y - landmarks[MOUTH.LOWER_LIP].y,
-  // );
-  //
-  // const score = mouthWidth / mouthHeight;
-  // const score = mouthHeight / mouthWidth;
-
-
   // MAR
   const rightDiff = Math.hypot(
     landmarks[MOUTH.NE].x - landmarks[MOUTH.SE].x,
@@ -191,8 +172,7 @@ function normLandmark(pt, landmarks) {
   }
 }
 
-function getFaceOutlineBox({ ctx, landmarks }) {
-  const origin = 10;
+function getFaceOutlineBox({ landmarks }) {
   let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
 
   faceOutlinePts.forEach((pt) => {
@@ -209,18 +189,6 @@ function getFaceOutlineBox({ ctx, landmarks }) {
     w: (maxX - minX),
     h: (maxY - minY),
   }
-
-  // ctx.beginPath();
-  // const originCoordinates = normLandmark(origin, landmarks);
-  // ctx.moveTo(originCoordinates.x, originCoordinates.y);
-  //
-  // faceOutlinePts.forEach((pt) => {
-  //   let ptCoords = normLandmark(pt, landmarks);
-  //   ctx.lineTo(ptCoords.x, ptCoords.y);
-  // });
-  //
-  // ctx.closePath();
-  // ctx.clip();
 }
 
 function getFaceCenterRadius(landmarks) {
@@ -236,12 +204,6 @@ function getFaceCenterRadius(landmarks) {
 
 function makeFacePath(ctx, landmarks, offset = { x: 0, y: 0 }) {
   const origin = 10;
-  // if (!offset) {
-  //   offset = {
-  //     x: 0,
-  //     y: 0,
-  //   }
-  // }
   ctx.beginPath();
 
   faceOutlinePts.forEach((pt) => {
@@ -254,15 +216,8 @@ function makeFacePath(ctx, landmarks, offset = { x: 0, y: 0 }) {
       ctx.lineTo(ptCoords.x - offset.x, ptCoords.y - offset.y);
       console.log(`lineTo ${ptCoords.x - offset.x}, ${ptCoords.y - offset.y}`);
     }
-    // ctx.fillStyle = "green";
-    // ctx.arc(ptCoords.x, ptCoords.y, 2, 0, 2 * Math.PI);
-    // ctx.fill();
   });
   ctx.closePath();
-  // ctx.lineWidth = 2;
-  // ctx.strokeStyle = "blue";
-  // ctx.stroke();
-  // console.log("Stroked");
 }
 
 function getOrbitAngle(startTime, radiansPerSecond = Math.PI * 2 / 4) {
@@ -318,38 +273,7 @@ function onResults(results) {
     // drawMultiFace(ctx, landmarks, results.image);
     // draw3DOrbitingImage({ ctx, landmarks, startTime: timerStart });
 
-    // ctx.save();
-    // ctx.setTransform(1, 0, 0, 1, 0, 0) // undo mirror
-    // ctx.fillStyle = isSmiling ? 'lime' : 'red';
-    // ctx.font = '20px Arial';
     if (!score) return;
-    // ctx.fillText(
-    //   `Smile: ${score.toFixed(2)} ${isSmiling ? '😄' : ''}`,
-    //   10,
-    //   30
-    // );
-    // ctx.fillText(
-    //   `rightDiff: ${rightDiff}\n`,
-    //   10,
-    //   50
-    // );
-    // ctx.fillText(
-    //   ` centerDiff: ${centerDiff}\n`,
-    //   10,
-    //   70
-    // );
-    // ctx.fillText(
-    //   ` leftDiff: ${leftDiff}\n`,
-    //   10,
-    //   90
-    // );
-    // ctx.fillText(
-    //   ` widthDiff: ${widthDiff}\n`,
-    //   10,
-    //   110
-    // );
-    // ctx.restore();
-
 
     if (isSmiling) {
       const cx = ((MOUTH.LEFT.x + MOUTH.RIGHT.x) / 2) * canvas.width;
@@ -362,19 +286,13 @@ function onResults(results) {
     }
 
     handleSmile(isSmiling);
+    updateGameOverState();
     if (gameState.gameOver) {
       handleGameOver();
     };
 
-
-
-    // console.log(`smiling? ${isSmiling}`);
-    // console.log(landmarks[MOUTH.LEFT].x, landmarks[MOUTH.RIGHT].x, landmarks[MOUTH.LOWER_LIP].y, landmarks[MOUTH.UPPER_LIP].y);
     addOverlay(ctx, landmarks, results.image, now);
   }
-
-
-  // ctx.restore();
 }
 
 function handleSmile(isSimling) {
@@ -442,8 +360,6 @@ function addOverlay(ctx, landmarks, image, currentTime) {
 
   if (currentActionIndex < 0 || !showAction) return;
 
-  // console.log(currentTime);
-  // console.log("drawing action");
   const action = actions[currentActionIndex];
 
   if (action.config) {
@@ -577,15 +493,11 @@ function drawFaceUpsideDown(ctx, landmarks) {
   // Translate back to draw image aligned with rotation center
   ctx.translate(-width / 2, -height / 2);
 
-  // ctx.save();
-  //
   const origin = 10;
   ctx.beginPath();
   faceOutlinePts.forEach((pt) => {
     let ptCoords = normLandmark(pt, landmarks);
     if (pt === origin) {
-      // console.log(`ptCoords.x : ${ptCoords.x}, ptCoords.y : ${ptCoords.y}`);
-      // console.log(`x : ${x}, y : ${y}`);
       ctx.moveTo(ptCoords.x - x, ptCoords.y - y);
     }
     else {
@@ -602,8 +514,6 @@ function drawFaceUpsideDown(ctx, landmarks) {
     0, 0, width, height   // destination rectangle inside transformed context
   );
 
-  // Undo Clip
-  // ctx.restore();
   // Restore canvas state to undo translation and rotation
   ctx.restore();
 }
@@ -648,9 +558,6 @@ function drawMultiFace({ ctx, landmarks, image }) {
 }
 
 function drawMouthOnly({ ctx, landmarks, image }) {
-  // const detailedMouthLandmarks = [
-  //   291, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 323, 361, 291
-  // ];
   const detailedMouthLandmarks = [146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
 
   ctx.save(); // S1
@@ -670,26 +577,10 @@ function drawMouthOnly({ ctx, landmarks, image }) {
   ctx.clip();
 
   ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  // ctx.fillStyle = 'green';
-  // detailedMouthLandmarks.forEach((pt) => {
-  //   console.log(landmarks[pt].x * canvas.width, landmarks[pt].y * canvas.height);
-  //   const x = landmarks[pt].x * canvas.width;
-  //   const y = landmarks[pt].y * canvas.height;
-  //   ctx.beginPath();
-  //   ctx.arc(x, y, 2, 0, 2 * Math.PI);
-  //   ctx.fill()
-  //   ctx.fillText("g", x, y);
-  // });
 
   ctx.restore(); //xS2
   ctx.restore(); //xS1
 }
-//
-
-// function drawPenText(ctx, image) {
-//   const prefix = "PEN ";
-//
-// }
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.save();
@@ -776,15 +667,7 @@ function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) 
       0, 0, canvas.width, canvas.height,  // source rectangle from video
       0, 0, canvas.width, canvas.height   // destination rectangle inside transformed context
     );
-    // ctx.globalCompositeOperation = 'source-atop';  // <- SET HERE
-
-    //
-    // ctx.globalCompositeOperation = 'destination-out';
-    // ctx.fillStyle = 'black';
-    // ctx.fill();
-    // ctx.restore();
     ctx.restore();
-    // ctx.globalCompositeOperation = 'source-over';
   }
 }
 
