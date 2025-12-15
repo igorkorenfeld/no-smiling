@@ -17,6 +17,7 @@ const btnStop = document.getElementById('video__stop');
 /* __________ @SEC: GAMESTATE  __________ */
 const gameConfig = {
   smileLimit: 3,
+  actionInterval: 5_000,
 }
 
 const gameState = {
@@ -24,6 +25,8 @@ const gameState = {
   timeCutOff: false,
   activeSmile: false,
   gameOver: false,
+  smilesLeft: 3,
+  lastSmileTime: 0,
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
@@ -210,11 +213,9 @@ function makeFacePath(ctx, landmarks, offset = { x: 0, y: 0 }) {
     let ptCoords = normLandmark(pt, landmarks);
     if (pt === origin) {
       ctx.moveTo(ptCoords.x - offset.x, ptCoords.y - offset.y);
-      console.log(`moveTo ${ptCoords.x - offset.x}, ${ptCoords.y - offset.y}`);
     }
     else {
       ctx.lineTo(ptCoords.x - offset.x, ptCoords.y - offset.y);
-      console.log(`lineTo ${ptCoords.x - offset.x}, ${ptCoords.y - offset.y}`);
     }
   });
   ctx.closePath();
@@ -237,6 +238,7 @@ async function run() {
 }
 
 const tempAction = createPreviousFaceAction();
+const flash = createFlash(200);
 
 // Called whenever FaceMesh has new results
 function onResults(results) {
@@ -262,7 +264,7 @@ function onResults(results) {
     //Draw Eye line
     // drawEyeLine(ctx, landmarks);
     addTimer({ ctx, startTime: timerStart });
-    tempAction({ ctx, landmarks, image: results.image, });
+    // tempAction({ ctx, landmarks, image: results.image, });
 
 
     // Detect Smile
@@ -289,36 +291,88 @@ function onResults(results) {
     }
 
     handleSmile(isSmiling);
-    updateGameOverState();
+    updateGameState();
     if (gameState.gameOver) {
       handleGameOver();
     };
 
+    drawSmilesLeft(ctx);
     addOverlay(ctx, landmarks, results.image, now);
   }
+}
+
+function drawSmilesLeft(ctx) {
+  ctx.save();
+  ctx.fillStyle = 'white';
+  for (let i = 0; i < gameState.smilesLeft; i++) {
+    // Based Circle
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 20 + i * 20, 20, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    //
+    // Eyes
+    ctx.save()
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 17 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 23 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.restore();
+
+    // Mouth
+    ctx.save()
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 25 + i * 20, 23);
+
+    // Set an end-point
+    ctx.lineTo(canvas.width / 2 - 15 + i * 20, 23);
+
+    // Add the stroke
+    ctx.linewidth = 1;
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 function handleSmile(isSimling) {
 
   if (isSimling) {
+    const now = performance.now();
+    const SMILE_TIME_TOLERANCE = 850
+    // Early return for smiles that were less than a second ago;
+    if (now - gameState.lastSmileTime < SMILE_TIME_TOLERANCE) {
+      gameState.lastSmileTime = performance.now();
+      return;
+    }
+    console.log(`activeSmile: ${gameState.activeSmile}`);
+    console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
     if (!gameState.activeSmile) {
       gameState.smileCount++;
     }
+    flash.triggerFlash();
+    gameState.lastSmileTime = performance.now();
   }
   gameState.activeSmile = isSimling;
 
 }
 
-function updateGameOverState() {
+function updateGameState() {
   //Case 1 smile counts
   //Case 2 smile after cutoff time
   //Case 3 time is up
+  gameState.smilesLeft = gameConfig.smileLimit - gameState.smileCount;
+  console.log(gameState.smileCount);
   if (gameState.smileCount > gameConfig.smileLimit) {
     gameState.gameOver = true;
   }
 }
 
 function handleGameOver() {
+  // flash.drawFlash(ctx, canvas);
   console.log("Game over");
 }
 
@@ -380,15 +434,52 @@ function addOverlay(ctx, landmarks, image, currentTime) {
   }
 }
 
+function createFlash(duration = 200) {
+  let active = false;
+  let alpha = 0;
+  let starTime = 0
+
+  function triggerFlash(now = performance.now()) {
+    active = true;
+    alpha = 1;
+    starTime = now;
+  }
+
+  function drawFlash(ctx, canvas, now = performance.now()) {
+    if (!active) return;
+
+    const elapsed = now - starTime;
+    const t = elapsed / duration;
+
+    if (t >= 1) {
+      active = false;
+      alpha = 0;
+      return;
+    }
+
+    const ease = 1 - ((1 - t) * (1 - t));
+    alpha = 1 - ease;
+
+    ctx.save()
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  return { triggerFlash, drawFlash };
+}
+
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
   { fn: drawFaceWord, config: { word: 'Sus' } },
-  { fn: drawMoustacheEmoji },
-  { fn: drawEyeLine },
-  { fn: drawWord, config: { word: 'MOIST' } },
-  { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
-  { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  // { fn: drawMoustacheEmoji },
+  // { fn: drawEyeLine },
+  // { fn: drawWord, config: { word: 'MOIST' } },
+  // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  { fn: createPreviousFaceAction(), duration: 5_000, },
 ];
 
 // TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
@@ -701,10 +792,11 @@ function createPreviousFaceAction() {
       makeFacePath(state.prevCtx, landmarks);
       state.prevCtx.clip();
 
+      const OFFSET_X = 20;
       state.prevCtx.drawImage(
         image,
         faceBox.x, faceBox.y, faceBox.w, faceBox.h,
-        faceBox.x, faceBox.y, faceBox.w, faceBox.h
+        faceBox.x + OFFSET_X, faceBox.y, faceBox.w, faceBox.h
       );
       state.prevCtx.restore();
 
