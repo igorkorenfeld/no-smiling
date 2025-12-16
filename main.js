@@ -18,6 +18,7 @@ const btnStop = document.getElementById('video__stop');
 const gameConfig = {
   smileLimit: 3,
   actionInterval: 5_000,
+  graceTime: 3_000,
 }
 
 const gameState = {
@@ -27,6 +28,8 @@ const gameState = {
   gameOver: false,
   smilesLeft: 3,
   lastSmileTime: 0,
+  gracePeriod: true,
+  gameStartTime: 0,
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
@@ -107,7 +110,7 @@ function handleStart() {
   }
   const selectedId = cameraSelect.value || currentDeviceId;
   if (selectedId) startCamera(selectedId);
-  timerStart = performance.now();
+  gameState.gameStartTime = performance.now();
 }
 
 function handleStop() {
@@ -263,7 +266,7 @@ function onResults(results) {
 
     //Draw Eye line
     // drawEyeLine(ctx, landmarks);
-    addTimer({ ctx, startTime: timerStart });
+    addTimer({ ctx, startTime: gameState.gameStartTime });
     // tempAction({ ctx, landmarks, image: results.image, });
 
 
@@ -276,7 +279,7 @@ function onResults(results) {
     // drawFaceUpsideDown(ctx, landmarks);
     // drawMouthOnly(ctx, landmarks, results.image);
     // drawMultiFace(ctx, landmarks, results.image);
-    // draw3DOrbitingImage({ ctx, landmarks, startTime: timerStart });
+    // draw3DOrbitingImage({ ctx, landmarks, startTime: gameState.gameStartTime });
 
     if (!score) return;
 
@@ -290,7 +293,7 @@ function onResults(results) {
       ctx.restore();
     }
 
-    handleSmile(isSmiling);
+    handleSmile(isSmiling, ctx);
     updateGameState();
     if (gameState.gameOver) {
       handleGameOver();
@@ -301,53 +304,22 @@ function onResults(results) {
   }
 }
 
-function drawSmilesLeft(ctx) {
-  ctx.save();
-  ctx.fillStyle = 'white';
-  for (let i = 0; i < gameState.smilesLeft; i++) {
-    // Based Circle
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 20 + i * 20, 20, 8, 0, 2 * Math.PI);
-    ctx.fill();
-    //
-    // Eyes
-    ctx.save()
-    ctx.fillStyle = 'black';
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 17 + i * 20, 18, 1, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 23 + i * 20, 18, 1, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.restore();
 
-    // Mouth
-    ctx.save()
-    ctx.beginPath();
-    ctx.moveTo(canvas.width / 2 - 25 + i * 20, 23);
-
-    // Set an end-point
-    ctx.lineTo(canvas.width / 2 - 15 + i * 20, 23);
-
-    // Add the stroke
-    ctx.linewidth = 1;
-    ctx.strokeStyle = "black";
-    ctx.stroke();
-    ctx.restore();
-  }
-  ctx.restore();
-}
-
-function handleSmile(isSimling) {
+function handleSmile(isSimling, ctx) {
 
   if (isSimling) {
+    addSmilingText(ctx);
     const now = performance.now();
     const SMILE_TIME_TOLERANCE = 850
+    // Dislay similing text
+
+    // Early return during grace period
     // Early return for smiles that were less than a second ago;
-    if (now - gameState.lastSmileTime < SMILE_TIME_TOLERANCE) {
+    if (gameState.gracePeriod || now - gameState.lastSmileTime < SMILE_TIME_TOLERANCE) {
       gameState.lastSmileTime = performance.now();
       return;
     }
+
     console.log(`activeSmile: ${gameState.activeSmile}`);
     console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
     if (!gameState.activeSmile) {
@@ -368,6 +340,10 @@ function updateGameState() {
   console.log(gameState.smileCount);
   if (gameState.smileCount > gameConfig.smileLimit) {
     gameState.gameOver = true;
+  }
+
+  if (gameState.gracePeriod && (performance.now() - gameState.gameStartTime > gameConfig.graceTime)) {
+    gameState.gracePeriod = false;
   }
 }
 
@@ -437,18 +413,18 @@ function addOverlay(ctx, landmarks, image, currentTime) {
 function createFlash(duration = 200) {
   let active = false;
   let alpha = 0;
-  let starTime = 0
+  let startTime = 0
 
   function triggerFlash(now = performance.now()) {
     active = true;
     alpha = 1;
-    starTime = now;
+    startTime = now;
   }
 
   function drawFlash(ctx, canvas, now = performance.now()) {
     if (!active) return;
 
-    const elapsed = now - starTime;
+    const elapsed = now - startTime;
     const t = elapsed / duration;
 
     if (t >= 1) {
@@ -470,6 +446,89 @@ function createFlash(duration = 200) {
   return { triggerFlash, drawFlash };
 }
 
+
+/* __________ @SEC: SUPPORTING UI __________ */
+
+function addSmilingText(ctx) {
+  const MSG = 'YOU SMILED!';
+  ctx.save();
+  ctx.font = '24px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  const padding = 16;
+  const textWidth = ctx.measureText(MSG).width;
+  const boxWidth = textWidth + (padding * 2);
+  const boxPosition = {
+    x: (canvas.width / 2) - (textWidth / 2) - padding,
+    y: 0,
+  }
+
+  ctx.fillStyle = gameState.gracePeriod ? 'green' : 'white';
+  ctx.shadowColor = 'rgba(0, 0, 0, .25)';
+  ctx.shadowOffsetX = 1;
+  ctx.shadowOffsetY = 2;
+  ctx.shadowBlur = 6;
+  ctx.fillText(MSG, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
+  ctx.restore();
+}
+
+function drawSmilesLeft(ctx) {
+  ctx.save();
+  ctx.fillStyle = 'white';
+  for (let i = 0; i < gameState.smilesLeft; i++) {
+    // Based Circle
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 20 + i * 20, 20, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    //
+    // Eyes
+    ctx.save()
+    ctx.fillStyle = 'black';
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 17 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(canvas.width / 2 - 23 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.restore();
+
+    // Mouth
+    ctx.save()
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 25 + i * 20, 23);
+
+    // Set an end-point
+    ctx.lineTo(canvas.width / 2 - 15 + i * 20, 23);
+
+    // Add the stroke
+    ctx.linewidth = 1;
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function addTimer({ ctx, startTime }) {
+  const elasped = performance.now() - startTime;
+  const seconds = Math.floor(elasped / 1_000);
+  const minutes = Math.floor(seconds / 60);
+  // console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
+  const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+
+  ctx.save();
+  ctx.font = '20px Arial';
+  ctx.fillStyle = 'white';
+  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+  // ctx.textAlign = 'center';
+  ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
+
+  ctx.restore();
+  console.log(text);
+}
+
+
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
@@ -488,7 +547,6 @@ let currentActionIndex = -1;
 
 let actionStartTime = 0;
 const ACTION_INTERVAL = 5_000;
-let timerStart = 0;
 
 
 
@@ -695,24 +753,6 @@ function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.fillText(word, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
 
   ctx.restore();
-}
-
-function addTimer({ ctx, startTime }) {
-  const elasped = performance.now() - startTime;
-  const seconds = Math.floor(elasped / 1_000);
-  const minutes = Math.floor(seconds / 60);
-  // console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
-  const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
-
-  ctx.save();
-  ctx.font = '20px Arial';
-  ctx.fillStyle = 'white';
-  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
-  // ctx.textAlign = 'center';
-  ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
-
-  ctx.restore();
-  console.log(text);
 }
 
 function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
