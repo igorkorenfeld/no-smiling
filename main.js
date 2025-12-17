@@ -499,15 +499,26 @@ function drawSmilesLeft(ctx) {
     ctx.save()
     ctx.beginPath();
     ctx.moveTo(canvas.width / 2 - 25 + i * 20, yPosition + 3);
-
-    // Set an end-point
     ctx.lineTo(canvas.width / 2 - 15 + i * 20, yPosition + 3);
-
-    // Add the stroke
     ctx.linewidth = 1;
-    ctx.strokeStyle = "black";
+    ctx.strokeStyle = 'black';
     ctx.stroke();
     ctx.restore();
+
+
+    //Box during grace period
+    if (gameState.gracePeriod) {
+      ctx.save()
+      ctx.beginPath();
+      // 3 faces, with radius of 8, with 3px padding between
+      const rectWidth = (3 * (8 * 2)) + (6 * 4);
+      // face height + padding
+      const rectHeight = (8 * 2) + (2 * 3);
+      ctx.rect(xPosition - 16, yPosition - 11, rectWidth, rectHeight);
+      ctx.strokeStyle = 'white';
+      ctx.stroke();
+      ctx.restore()
+    }
   }
   ctx.restore();
 }
