@@ -474,32 +474,34 @@ function addSmilingText(ctx) {
 }
 
 function drawSmilesLeft(ctx) {
+  const xPosition = canvas.width / 2 - 20;
+  const yPosition = canvas.height - 60;
   ctx.save();
   ctx.fillStyle = 'white';
   for (let i = 0; i < gameState.smilesLeft; i++) {
     // Based Circle
     ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 20 + i * 20, 20, 8, 0, 2 * Math.PI);
+    ctx.arc(xPosition + i * 20, yPosition, 8, 0, 2 * Math.PI);
     ctx.fill();
     //
     // Eyes
     ctx.save()
     ctx.fillStyle = 'black';
     ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 17 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.arc(xPosition + 3 + i * 20, yPosition - 2, 1, 0, 2 * Math.PI);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(canvas.width / 2 - 23 + i * 20, 18, 1, 0, 2 * Math.PI);
+    ctx.arc(xPosition - 3 + i * 20, yPosition - 2, 1, 0, 2 * Math.PI);
     ctx.fill();
     ctx.restore();
 
     // Mouth
     ctx.save()
     ctx.beginPath();
-    ctx.moveTo(canvas.width / 2 - 25 + i * 20, 23);
+    ctx.moveTo(canvas.width / 2 - 25 + i * 20, yPosition + 3);
 
     // Set an end-point
-    ctx.lineTo(canvas.width / 2 - 15 + i * 20, 23);
+    ctx.lineTo(canvas.width / 2 - 15 + i * 20, yPosition + 3);
 
     // Add the stroke
     ctx.linewidth = 1;
