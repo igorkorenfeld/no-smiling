@@ -451,17 +451,19 @@ function createFlash(duration = 200) {
 
 function addSmilingText(ctx) {
   const MSG = 'YOU SMILED!';
+  const FONT_SIZE = 24;
   ctx.save();
-  ctx.font = '24px Arial';
+  ctx.font = `${FONT_SIZE}px Arial`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
-  const padding = 16;
+  const paddingX = 16;
+  const paddingY = 80;
   const textWidth = ctx.measureText(MSG).width;
-  const boxWidth = textWidth + (padding * 2);
+  const boxWidth = textWidth + (paddingX * 2);
   const boxPosition = {
-    x: (canvas.width / 2) - (textWidth / 2) - padding,
-    y: 0,
+    x: (canvas.width / 2) - (textWidth / 2) - paddingX,
+    y: canvas.height - FONT_SIZE - paddingY,
   }
 
   ctx.fillStyle = gameState.gracePeriod ? 'green' : 'white';
@@ -469,7 +471,7 @@ function addSmilingText(ctx) {
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 2;
   ctx.shadowBlur = 6;
-  ctx.fillText(MSG, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
+  ctx.fillText(MSG, boxWidth / 2 + boxPosition.x, boxPosition.y);
   ctx.restore();
 }
 
@@ -545,13 +547,18 @@ function addTimer({ ctx, startTime }) {
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  { fn: drawFaceWord, config: { word: 'Sus' } },
+  // { fn: drawFaceWord, config: { word: 'Sus' } },
   // { fn: drawMoustacheEmoji },
   // { fn: drawEyeLine },
   // { fn: drawWord, config: { word: 'MOIST' } },
   // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
-  { fn: createPreviousFaceAction(), duration: 5_000, },
+  // { fn: createPreviousFaceAction(), duration: 5_000, },
+  { fn: drawFaceUpsideDown, duration: 5_000, },
+  { fn: drawMouthOnly, duration: 3_000, },
+  { fn: drawMultiFace, duration: 3_000 },
+  // drawMouthOnly(ctx, landmarks, results.image);
+  // drawMultiFace(ctx, landmarks, results.image);
 ];
 
 // TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
@@ -565,7 +572,7 @@ const ACTION_INTERVAL = 5_000;
 
 function drawMoustacheEmoji({ ctx, landmarks }) {
   ctx.font = '40px Arial';
-  const moustachePoint = landmarks[2];
+  const moustachePoint = landmarks[164];
   const moustacheX = moustachePoint.x * canvas.width;
   const moustacheY = moustachePoint.y * canvas.height;
   const leftCheek = landmarks[50];
@@ -630,7 +637,7 @@ function drawEyeLine({ ctx, landmarks }) {
   ctx.stroke();
 }
 
-function drawFaceUpsideDown(ctx, landmarks) {
+function drawFaceUpsideDown({ ctx, landmarks }) {
   // Calculate face bounding box in pixels
   let minX = 1, minY = 1, maxX = 0, maxY = 0;
   landmarks.forEach(pt => {
@@ -784,7 +791,7 @@ function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
   ctx.restore();
 }
 
-function draw3DOrbitingImage({ ctx, landmarks, moon = '🌑', startTime } = {}) {
+function draw3DOrbitingImage({ ctx, landmarks, moon = '🦆🦅🦅', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
 
