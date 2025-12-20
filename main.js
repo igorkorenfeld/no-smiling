@@ -13,6 +13,8 @@ const ctx = canvas.getContext('2d');
 const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
+const moustche = new Image();
+moustche.src = './moustache.png';
 
 /* __________ @SEC: GAMESTATE  __________ */
 const gameConfig = {
@@ -268,6 +270,7 @@ function onResults(results) {
     // drawEyeLine(ctx, landmarks);
     addTimer({ ctx, startTime: gameState.gameStartTime });
     // tempAction({ ctx, landmarks, image: results.image, });
+    drawMoustache({ ctx, landmarks });
 
 
     // Detect Smile
@@ -554,9 +557,10 @@ const actions = [
   // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: createPreviousFaceAction(), duration: 5_000, },
-  { fn: drawFaceUpsideDown, duration: 5_000, },
-  { fn: drawMouthOnly, duration: 3_000, },
+  // { fn: drawFaceUpsideDown, duration: 5_000, },
+  // { fn: drawMouthOnly, duration: 3_000, },
   { fn: drawMultiFace, duration: 3_000 },
+  { fn: drawMoustache, duration: 3_000 },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];
@@ -584,6 +588,48 @@ function drawMoustacheEmoji({ ctx, landmarks }) {
 
   ctx.font = `${faceWidth * 0.1}px Arial`;
   ctx.fillText('🥸', moustacheX, moustacheY);
+}
+
+function getFaceWidth({ landmarks }) {
+  const leftCheek = normLandmark(50, landmarks);
+  const rightCheek = normLandmark(280, landmarks);
+  return Math.hypot(
+    (rightCheek.x - leftCheek.x),
+    (rightCheek.y - leftCheek.y),
+  );
+}
+
+function getMouthWidth({ landmarks }) {
+  const left = normLandmark(61, landmarks);
+  const right = normLandmark(291, landmarks);
+  return Math.hypot(
+    (right.x - left.x),
+    (right.y - left.y),
+  );
+}
+
+function getFaceAngle({ landmarks }) {
+  const left = normLandmark(33, landmarks);
+  const right = normLandmark(263, landmarks);
+  const dy = left.y - right.y;
+  const dx = left.x - right.x;
+  return Math.atan2(dy, dx);
+}
+
+function drawMoustache({ ctx, landmarks }) {
+  const moustachePoint = normLandmark(164, landmarks);
+  const mouthWidth = getMouthWidth({ landmarks });
+  const renderWidth = mouthWidth * 1.1;
+  const renderHeight = moustche.height * (renderWidth / moustche.width);
+  const angleRadians = getFaceAngle({ landmarks });
+
+  ctx.save();
+  ctx.translate(moustachePoint.x, moustachePoint.y);
+  ctx.rotate(angleRadians);
+  ctx.scale(1, -1);
+  ctx.drawImage(moustche, -renderWidth / 2, 0, renderWidth, renderHeight);
+  ctx.restore();
+
 }
 
 function drawFaceWord({ ctx, landmarks, word }) {
