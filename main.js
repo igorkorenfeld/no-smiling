@@ -232,6 +232,33 @@ function getOrbitAngle(startTime, radiansPerSecond = Math.PI * 2 / 4) {
 };
 
 
+function getFaceWidth({ landmarks }) {
+  const leftCheek = normLandmark(50, landmarks);
+  const rightCheek = normLandmark(280, landmarks);
+  return Math.hypot(
+    (rightCheek.x - leftCheek.x),
+    (rightCheek.y - leftCheek.y),
+  );
+}
+
+function getMouthWidth({ landmarks }) {
+  const left = normLandmark(61, landmarks);
+  const right = normLandmark(291, landmarks);
+  return Math.hypot(
+    (right.x - left.x),
+    (right.y - left.y),
+  );
+}
+
+function getFaceAngle({ landmarks }) {
+  const left = normLandmark(33, landmarks);
+  const right = normLandmark(263, landmarks);
+  const dy = left.y - right.y;
+  const dx = left.x - right.x;
+  return Math.atan2(dy, dx);
+}
+
+
 /* __________ @SEC: RUNNERS __________ */
 
 // Main entry
@@ -271,6 +298,8 @@ function onResults(results) {
     addTimer({ ctx, startTime: gameState.gameStartTime });
     // tempAction({ ctx, landmarks, image: results.image, });
     drawMoustache({ ctx, landmarks });
+    // drawSeeThroughMouth({ ctx, landmarks, image: results.image });
+    drawEyeEmoji({ ctx, landmarks })
 
 
     // Detect Smile
@@ -551,6 +580,7 @@ function addTimer({ ctx, startTime }) {
 
 const actions = [
   // { fn: drawFaceWord, config: { word: 'Sus' } },
+  // { fn: drawFaceWord, config: { word: 'Coward' } },
   // { fn: drawMoustacheEmoji },
   // { fn: drawEyeLine },
   // { fn: drawWord, config: { word: 'MOIST' } },
@@ -559,7 +589,7 @@ const actions = [
   // { fn: createPreviousFaceAction(), duration: 5_000, },
   // { fn: drawFaceUpsideDown, duration: 5_000, },
   // { fn: drawMouthOnly, duration: 3_000, },
-  { fn: drawMultiFace, duration: 3_000 },
+  // { fn: drawMultiFace, duration: 3_000 },
   { fn: drawMoustache, duration: 3_000 },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
@@ -588,32 +618,6 @@ function drawMoustacheEmoji({ ctx, landmarks }) {
 
   ctx.font = `${faceWidth * 0.1}px Arial`;
   ctx.fillText('🥸', moustacheX, moustacheY);
-}
-
-function getFaceWidth({ landmarks }) {
-  const leftCheek = normLandmark(50, landmarks);
-  const rightCheek = normLandmark(280, landmarks);
-  return Math.hypot(
-    (rightCheek.x - leftCheek.x),
-    (rightCheek.y - leftCheek.y),
-  );
-}
-
-function getMouthWidth({ landmarks }) {
-  const left = normLandmark(61, landmarks);
-  const right = normLandmark(291, landmarks);
-  return Math.hypot(
-    (right.x - left.x),
-    (right.y - left.y),
-  );
-}
-
-function getFaceAngle({ landmarks }) {
-  const left = normLandmark(33, landmarks);
-  const right = normLandmark(263, landmarks);
-  const dy = left.y - right.y;
-  const dx = left.x - right.x;
-  return Math.atan2(dy, dx);
 }
 
 function drawMoustache({ ctx, landmarks }) {
@@ -798,6 +802,72 @@ function drawMouthOnly({ ctx, landmarks, image }) {
 
   ctx.restore(); //xS2
   ctx.restore(); //xS1
+}
+
+function getMouthOutline({ ctx, landmarks }) {
+  const detailedMouthLandmarks = [146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+  const origin = landmarks[61];
+  ctx.beginPath();
+  ctx.moveTo(origin.x * canvas.width, origin.y * canvas.height);
+
+  detailedMouthLandmarks.forEach((pt) => {
+    ctx.lineTo(landmarks[pt].x * canvas.width, landmarks[pt].y * canvas.height);
+  });
+  ctx.closePath();
+}
+
+function drawSeeThroughMouth({ ctx, landmarks, image }) {
+  ctx.save();
+  getMouthOutline({ ctx, landmarks });
+  ctx.clip();
+  ctx.drawImage(image, normLandmark(33, landmarks).x, normLandmark(33, landmarks).y);
+  ctx.restore();
+}
+
+
+function drawEyeEmoji({ ctx, landmarks }) {
+  const eyeEmoji = '👀';
+  const leftEye = {
+    top: normLandmark(159, landmarks),
+    bottom: normLandmark(145, landmarks),
+  }
+  const rightEye = {
+    top: normLandmark(386, landmarks),
+    bottom: normLandmark(374, landmarks),
+  }
+
+  const leftEyeCenter = {
+    x: (leftEye.top.x + leftEye.bottom.x) / 2,
+    y: (leftEye.top.y + leftEye.bottom.y) / 2,
+  }
+
+  const rightEyeCenter = {
+    x: (rightEye.top.x + rightEye.bottom.x) / 2,
+    y: (rightEye.top.y + rightEye.bottom.y) / 2,
+  }
+
+  const lHeight = Math.floor(eucDist(leftEye.top, leftEye.bottom));
+  const rHeight = Math.floor(eucDist(rightEye.top, rightEye.bottom));
+
+  //Left side
+  ctx.save();
+  ctx.font = `${lHeight * 1.5}px Arial`;
+  console.log(`${lHeight}px Arial`);
+  ctx.translate(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2), leftEyeCenter.y + 2);
+  ctx.rotate(getFaceAngle({ landmarks }));
+  ctx.scale(1, -1);
+  ctx.fillText(eyeEmoji, 0, 0);
+  ctx.restore();
+
+  //Right side
+  ctx.save();
+  ctx.font = `${rHeight * 1.5}px Arial`;
+  console.log(`${rHeight}px Arial`);
+  ctx.translate(rightEyeCenter.x - (ctx.measureText(eyeEmoji).width / 2), rightEyeCenter.y + 2);
+  ctx.rotate(getFaceAngle({ landmarks }));
+  ctx.scale(-1, -1);
+  ctx.fillText(eyeEmoji, 0, 0);
+  ctx.restore();
 }
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
