@@ -285,6 +285,7 @@ function onResults(results) {
   // ctx.scale(-1, 1);
   ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
   // ctx.restore()
+  const tempDrawEmoji = makeEyeEmojiDrawer();
 
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const landmarks = results.multiFaceLandmarks[0]; // one face only
@@ -299,7 +300,8 @@ function onResults(results) {
     // tempAction({ ctx, landmarks, image: results.image, });
     drawMoustache({ ctx, landmarks });
     // drawSeeThroughMouth({ ctx, landmarks, image: results.image });
-    drawEyeEmoji({ ctx, landmarks })
+    // drawEyeEmoji({ ctx, landmarks });
+    tempDrawEmoji({ ctx, landmarks });
 
 
     // Detect Smile
@@ -825,49 +827,88 @@ function drawSeeThroughMouth({ ctx, landmarks, image }) {
 }
 
 
-function drawEyeEmoji({ ctx, landmarks }) {
-  const eyeEmoji = '👀';
-  const leftEye = {
-    top: normLandmark(159, landmarks),
-    bottom: normLandmark(145, landmarks),
+function makeEyeEmojiDrawer() {
+  const lastFontSize = {
+    left: 0,
+    right: 0,
+  };
+
+  return function drawEyeEmoji({ ctx, landmarks }) {
+    // const eyeEmoji = '👀';
+    const eyeEmoji = '👁️';
+    const leftEye = {
+      top: normLandmark(159, landmarks),
+      bottom: normLandmark(145, landmarks),
+    }
+    const rightEye = {
+      top: normLandmark(386, landmarks),
+      bottom: normLandmark(374, landmarks),
+    }
+
+    const leftEyeCenter = {
+      x: (leftEye.top.x + leftEye.bottom.x) / 2,
+      y: (leftEye.top.y + leftEye.bottom.y) / 2,
+    }
+
+    const rightEyeCenter = {
+      x: (rightEye.top.x + rightEye.bottom.x) / 2,
+      y: (rightEye.top.y + rightEye.bottom.y) / 2,
+    }
+
+    const newFontSize = {
+      left: Math.floor(eucDist(leftEye.top, leftEye.bottom)),
+      right: Math.floor(eucDist(rightEye.top, rightEye.bottom)),
+    }
+
+    let lHeight, rHeight;
+    if (newFontSize.left > lastFontSize.left + 1) {
+      lastFontSize.left = newFontSize.left;
+      lHeight = newFontSize.left;
+    }
+    else {
+      lHeight = lastFontSize.left;
+    }
+
+    if (newFontSize.right > lastFontSize.right + 1) {
+      lastFontSize.right = newFontSize.right;
+      rHeight = newFontSize.right;
+    }
+    else {
+      rHeight = lastFontSize.right;
+    }
+
+    // const lHeight = newFontSize.left > lastFontSize.left + 1 ? 
+    // const rHeight = Math.floor(eucDist(rightEye.top, rightEye.bottom));
+
+
+    //Left side
+    ctx.save();
+    ctx.font = `${lHeight * 3}px Arial`;
+    console.log(`${lHeight}px Arial`);
+    ctx.translate(
+      // Math.round(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2)),
+      Math.round(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2)),
+      Math.round(leftEyeCenter.y) - 10
+    );
+    ctx.rotate(getFaceAngle({ landmarks }));
+    ctx.scale(1, 1);
+    ctx.fillText(eyeEmoji, 0, 0);
+    ctx.restore();
+
+    //Right side
+    ctx.save();
+    ctx.font = `${rHeight * 3}px Arial`;
+    console.log(`${rHeight}px Arial`);
+    console.log(`${rightEyeCenter.y.toFixed((2))}px y position`);
+    ctx.translate(
+      Math.round(rightEyeCenter.x - (ctx.measureText(eyeEmoji).width / 2)),
+      Math.round(rightEyeCenter.y) + 10,
+    );
+    ctx.rotate(getFaceAngle({ landmarks }));
+    ctx.scale(-1, -1);
+    ctx.fillText('👁️', 0, 0);
+    ctx.restore();
   }
-  const rightEye = {
-    top: normLandmark(386, landmarks),
-    bottom: normLandmark(374, landmarks),
-  }
-
-  const leftEyeCenter = {
-    x: (leftEye.top.x + leftEye.bottom.x) / 2,
-    y: (leftEye.top.y + leftEye.bottom.y) / 2,
-  }
-
-  const rightEyeCenter = {
-    x: (rightEye.top.x + rightEye.bottom.x) / 2,
-    y: (rightEye.top.y + rightEye.bottom.y) / 2,
-  }
-
-  const lHeight = Math.floor(eucDist(leftEye.top, leftEye.bottom));
-  const rHeight = Math.floor(eucDist(rightEye.top, rightEye.bottom));
-
-  //Left side
-  ctx.save();
-  ctx.font = `${lHeight * 1.5}px Arial`;
-  console.log(`${lHeight}px Arial`);
-  ctx.translate(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2), leftEyeCenter.y + 2);
-  ctx.rotate(getFaceAngle({ landmarks }));
-  ctx.scale(1, -1);
-  ctx.fillText(eyeEmoji, 0, 0);
-  ctx.restore();
-
-  //Right side
-  ctx.save();
-  ctx.font = `${rHeight * 1.5}px Arial`;
-  console.log(`${rHeight}px Arial`);
-  ctx.translate(rightEyeCenter.x - (ctx.measureText(eyeEmoji).width / 2), rightEyeCenter.y + 2);
-  ctx.rotate(getFaceAngle({ landmarks }));
-  ctx.scale(-1, -1);
-  ctx.fillText(eyeEmoji, 0, 0);
-  ctx.restore();
 }
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
