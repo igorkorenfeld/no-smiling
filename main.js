@@ -828,10 +828,28 @@ function drawSeeThroughMouth({ ctx, landmarks, image }) {
 
 
 function makeEyeEmojiDrawer() {
+  const TOLERANCE = 2;
+  const SMOOTH_FACTOR = 0.8;
+
   const lastFontSize = {
     left: 0,
     right: 0,
   };
+
+  const lastPosition = {
+    left: { x: null, y: null },
+    right: { x: null, y: null },
+  }
+
+  function smoothPosition(current, prev) {
+    if (prev.x == null || prev.y == null) return current;
+
+    return {
+      x: (prev.x * (1 - SMOOTH_FACTOR)) + (current.x * SMOOTH_FACTOR),
+      y: (prev.y * (1 - SMOOTH_FACTOR)) + (current.y * SMOOTH_FACTOR),
+    }
+
+  }
 
   return function drawEyeEmoji({ ctx, landmarks }) {
     // const eyeEmoji = '👀';
@@ -845,15 +863,21 @@ function makeEyeEmojiDrawer() {
       bottom: normLandmark(374, landmarks),
     }
 
-    const leftEyeCenter = {
+    const rawLeftEyeCenter = {
       x: (leftEye.top.x + leftEye.bottom.x) / 2,
       y: (leftEye.top.y + leftEye.bottom.y) / 2,
     }
 
-    const rightEyeCenter = {
+    const rawRightEyeCenter = {
       x: (rightEye.top.x + rightEye.bottom.x) / 2,
       y: (rightEye.top.y + rightEye.bottom.y) / 2,
     }
+
+    const leftEyeCenter = smoothPosition(rawLeftEyeCenter, lastPosition.left);
+    const rightEyeCenter = smoothPosition(rawRightEyeCenter, lastPosition.right);
+
+    lastPosition.left = leftEyeCenter;
+    lastPosition.right = rightEyeCenter;
 
     const newFontSize = {
       left: Math.floor(eucDist(leftEye.top, leftEye.bottom)),
@@ -861,7 +885,7 @@ function makeEyeEmojiDrawer() {
     }
 
     let lHeight, rHeight;
-    if (newFontSize.left > lastFontSize.left + 1) {
+    if (newFontSize.left > lastFontSize.left + TOLERANCE) {
       lastFontSize.left = newFontSize.left;
       lHeight = newFontSize.left;
     }
@@ -869,7 +893,7 @@ function makeEyeEmojiDrawer() {
       lHeight = lastFontSize.left;
     }
 
-    if (newFontSize.right > lastFontSize.right + 1) {
+    if (newFontSize.right > lastFontSize.right + TOLERANCE) {
       lastFontSize.right = newFontSize.right;
       rHeight = newFontSize.right;
     }
