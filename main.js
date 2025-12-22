@@ -199,6 +199,26 @@ function getFaceOutlineBox({ landmarks }) {
   }
 }
 
+function getFeatureExtents(featureArray, landmarks) {
+  let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+  featureArray.forEach((pt) => {
+    const ptCoords = normLandmark(pt, landmarks);
+    minX = Math.min(minX, ptCoords.x);
+    minY = Math.min(minY, ptCoords.y);
+    maxX = Math.max(maxX, ptCoords.x);
+    maxY = Math.max(maxY, ptCoords.y);
+  });
+
+  return {
+    x: minX,
+    y: minY,
+    w: (maxX - minX),
+    h: (maxY - minY),
+  }
+
+}
+
 function getFaceCenterRadius(landmarks) {
   const headTop = normLandmark(10, landmarks);
   const headBottom = normLandmark(152, landmarks);
@@ -285,7 +305,7 @@ function onResults(results) {
   // ctx.scale(-1, 1);
   ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
   // ctx.restore()
-  const tempDrawEmoji = makeEyeEmojiDrawer();
+  // const tempDrawEmoji = makeEyeEmojiDrawer();
 
   if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
     const landmarks = results.multiFaceLandmarks[0]; // one face only
@@ -298,10 +318,11 @@ function onResults(results) {
     // drawEyeLine(ctx, landmarks);
     addTimer({ ctx, startTime: gameState.gameStartTime });
     // tempAction({ ctx, landmarks, image: results.image, });
-    drawMoustache({ ctx, landmarks });
+    // drawMoustache({ ctx, landmarks });
     // drawSeeThroughMouth({ ctx, landmarks, image: results.image });
     // drawEyeEmoji({ ctx, landmarks });
-    tempDrawEmoji({ ctx, landmarks });
+    // tempDrawEmoji({ ctx, landmarks });
+    drawEmojiAroundMouth({ ctx, landmarks });
 
 
     // Detect Smile
@@ -824,6 +845,28 @@ function drawSeeThroughMouth({ ctx, landmarks, image }) {
   ctx.clip();
   ctx.drawImage(image, normLandmark(33, landmarks).x, normLandmark(33, landmarks).y);
   ctx.restore();
+}
+
+
+function drawEmojiAroundMouth({ ctx, landmarks }) {
+  const detailedMouthLandmarks = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185];
+
+  const mouthBox = getFeatureExtents(detailedMouthLandmarks, landmarks);
+  const midPoint = mouthBox.y + (mouthBox.h / 2);
+
+  const emoji = '💩';
+  for (let i = 0; i < detailedMouthLandmarks.length; i += 2) {
+    const position = normLandmark(detailedMouthLandmarks[i], landmarks);
+    ctx.save();
+    ctx.font = `${mouthBox.h * 0.75}px Arial`;
+    const offset = position.y > midPoint ? 5 : -5;
+    ctx.translate(Math.round(position.x - (ctx.measureText(emoji).width / 2)), position.y + offset);
+    console.log(`emoji width ${ctx.measureText(emoji).width}`);
+    ctx.rotate(getFaceAngle({ landmarks }));
+    ctx.scale(-1, -1);
+    ctx.fillText(emoji, 0, 0);
+    ctx.restore();
+  }
 }
 
 
