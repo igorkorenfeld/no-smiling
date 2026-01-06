@@ -876,32 +876,13 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
 
   const mouthBox = getFeatureExtents(detailedMouthLandmarks, landmarks);
 
-  const leftEye = {
-    top: normLandmark(159, landmarks),
-    bottom: normLandmark(145, landmarks),
-  }
-  const rightEye = {
-    top: normLandmark(386, landmarks),
-    bottom: normLandmark(374, landmarks),
-  }
-
-  const rawLeftEyeCenter = {
-    x: (leftEye.top.x + leftEye.bottom.x) / 2,
-    y: (leftEye.top.y + leftEye.bottom.y) / 2,
-  }
-
-  const rawRightEyeCenter = {
-    x: (rightEye.top.x + rightEye.bottom.x) / 2,
-    y: (rightEye.top.y + rightEye.bottom.y) / 2,
-  }
-
+  const { left: leftEyeDimensions, right: rightEyeDimensions } = getEyeDimensions(landmarks);
 
   const eyePosition = {
     left: normLandmark(33, landmarks),
     right: normLandmark(362, landmarks)
   }
 
-  const { left: leftEyeDimensions, right: rightEyeDimensions } = getEyeDimensions(landmarks);
 
   const leftScale = leftEyeDimensions.h / leftEyeDimensions.w;
   const rightScale = rightEyeDimensions.h / rightEyeDimensions.w;
@@ -911,13 +892,13 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
 
   const destPosition = {
     left: {
-      x: eyePosition.left.x - (mouthBox.w / 2),
-      y: eyePosition.left.y - (mouthBox.h / 2),
+      x: eyePosition.left.x + (leftEyeDimensions.w / 2) - (mouthBox.w / 2),
+      y: eyePosition.left.y + (leftEyeDimensions.h / 2) - (mouthBox.h / 2) - 4,
     },
 
     right: {
-      x: eyePosition.right.x - (mouthBox.w / 2),
-      y: eyePosition.right.y - (mouthBox.h / 2),
+      x: eyePosition.right.x + (rightEyeDimensions.w / 2) - (mouthBox.w / 2),
+      y: eyePosition.right.y + (rightEyeDimensions.h / 2) - (mouthBox.h / 2) - 4,
     }
   }
 
@@ -930,10 +911,29 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
   console.log(`Redner width: ${leftRenderWidth}`);
 
   console.log(mouthOffset);
+
+  // Left Eye
   ctx.save();
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(destPosition.left.x, destPosition.left.y)
   console.log(destPosition.left);
+  // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
+  getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
+  ctx.strokeStyle = "red";
+  ctx.stroke();
+  ctx.clip();
+  ctx.drawImage(
+    image,
+    mouthBox.x, mouthBox.y, mouthBox.w, mouthBox.h,
+    0, 0, mouthBox.w, mouthBox.h
+  );
+  ctx.restore();
+
+  // Right Eye
+  ctx.save();
+  // ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(destPosition.right.x, destPosition.right.y)
+  console.log(destPosition.right);
   // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
   getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
   ctx.strokeStyle = "red";
