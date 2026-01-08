@@ -323,7 +323,7 @@ function onResults(results) {
     // drawEyeEmoji({ ctx, landmarks });
     // tempDrawEmoji({ ctx, landmarks });
     // drawEmojiAroundMouth({ ctx, landmarks });
-    drawMouthOnEyes({ ctx, landmarks, image: results.image });
+    // drawMouthOnEyes({ ctx, landmarks, image: results.image });
 
 
     // Detect Smile
@@ -603,8 +603,8 @@ function addTimer({ ctx, startTime }) {
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  // { fn: drawFaceWord, config: { word: 'Sus' } },
-  // { fn: drawFaceWord, config: { word: 'Coward' } },
+  { fn: drawFaceWord, config: { word: 'Sus' } },
+  { fn: drawFaceWord, config: { word: 'Coward' } },
   // { fn: drawMoustacheEmoji },
   // { fn: drawEyeLine },
   // { fn: drawWord, config: { word: 'MOIST' } },
@@ -612,9 +612,14 @@ const actions = [
   // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: createPreviousFaceAction(), duration: 5_000, },
   // { fn: drawFaceUpsideDown, duration: 5_000, },
+  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
   // { fn: drawMouthOnly, duration: 3_000, },
   // { fn: drawMultiFace, duration: 3_000 },
-  { fn: drawMoustache, duration: 3_000 },
+  // { fn: drawMoustache, duration: 3_000 },
+  // { fn: drawMouthOnly },
+  // { fn: drawMultiFace },
+  // { fn: drawMouthOnEyes },
+  // { fn: drawSeeThroughMouth },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];
@@ -670,13 +675,18 @@ function drawFaceWord({ ctx, landmarks, word }) {
 
   ctx.save();
   // Let's change the canvas position to draw rotated
-  ctx.font = `20px Arial`;
+  ctx.font = `24px Arial`;
   ctx.translate(foreheadX, foreheadY);
   ctx.rotate(angleRadians);
   ctx.scale(-1, -1);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
+  ctx.globalAlpha = 0.7;
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.strokeStyle = 'rgba(250, 250, 250, 0.95)';
   ctx.fillText(word, 0, 0);
+  ctx.strokeText(word, 0, 0);
   // ctx.fillText(lastAngle.toFixed(2), 0, 0);
   ctx.restore();
 }
