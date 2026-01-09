@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FaceMesh Single Face</title>
+  <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&display=swap"> -->
   <link rel="stylesheet" type="text/css" href="styles.css" />
   <style>
     video { display: none; }
@@ -16,6 +17,7 @@
   <!-- <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script> -->
 </head>
 <body>
+  <h1 class="title"> No Smiling </h1>
   <select id="camera-select"></select>
   <button id="video__start">Start</button>
   <button id="video__stop">Stop</button>
@@ -24,6 +26,7 @@
     <div class="canvas__container">
       <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
     </div>
+      <canvas id="c2" class="temp_canvas" width="640" height="480"></canvas>
 
   <script type="module" src="./main.js"></script>
 </body>
