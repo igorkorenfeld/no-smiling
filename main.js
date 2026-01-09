@@ -14,6 +14,9 @@ const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
 const moustche = new Image();
+const mainfont = new FontFace('Michroma', 'url("fonts/Michroma/Michroma-Regular.ttf")');
+const headerFont = 'Michroma';
+const systemFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
 moustche.src = './moustache.png';
 
 /* __________ @SEC: GAMESTATE  __________ */
@@ -509,7 +512,7 @@ function addSmilingText(ctx) {
   const MSG = 'YOU SMILED!';
   const FONT_SIZE = 24;
   ctx.save();
-  ctx.font = `${FONT_SIZE}px Arial`;
+  ctx.font = `${FONT_SIZE}px ${headerFont}, ${systemFont}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
@@ -589,7 +592,7 @@ function addTimer({ ctx, startTime }) {
   const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 
   ctx.save();
-  ctx.font = '20px Arial';
+  ctx.font = `20px ${headerFont}, ${systemFont}`;
   ctx.fillStyle = 'white';
   ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
   // ctx.textAlign = 'center';
@@ -603,23 +606,28 @@ function addTimer({ ctx, startTime }) {
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  { fn: drawFaceWord, config: { word: 'Sus' } },
+  // { fn: drawFaceWord, config: { word: 'Sus' } },
   { fn: drawFaceWord, config: { word: 'Coward' } },
-  // { fn: drawMoustacheEmoji },
+  { fn: drawFaceWord, config: { word: 'Dingus' } },
+  { fn: drawFaceWord, config: { word: 'Doofus' } },
+  // { fn: drawEmojiBelowNose },
   // { fn: drawEyeLine },
-  // { fn: drawWord, config: { word: 'MOIST' } },
+  { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
   // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: createPreviousFaceAction(), duration: 5_000, },
   // { fn: drawFaceUpsideDown, duration: 5_000, },
-  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
+  { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
   // { fn: drawMouthOnly, duration: 3_000, },
   // { fn: drawMultiFace, duration: 3_000 },
   // { fn: drawMoustache, duration: 3_000 },
-  // { fn: drawMouthOnly },
-  // { fn: drawMultiFace },
   // { fn: drawMouthOnEyes },
   // { fn: drawSeeThroughMouth },
+  { fn: drawEmojiAroundMouth },
+  { fn: makeEyeEmojiDrawer(), duration: 5_000 },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];
@@ -633,11 +641,11 @@ const ACTION_INTERVAL = 5_000;
 
 
 
-function drawMoustacheEmoji({ ctx, landmarks }) {
-  ctx.font = '40px Arial';
-  const moustachePoint = landmarks[164];
-  const moustacheX = moustachePoint.x * canvas.width;
-  const moustacheY = moustachePoint.y * canvas.height;
+function drawEmojiBelowNose({ ctx, landmarks, emoji = '🍤' } = {}) {
+  // const moustachePoint = landmarks[164];
+  // const moustacheX = moustachePoint.x * canvas.width;
+  // const moustacheY = moustachePoint.y * canvas.height;
+  const position = normLandmark(326, landmarks);
   const leftCheek = landmarks[50];
   const rightCheek = landmarks[280];
   const faceWidth = Math.hypot(
@@ -645,8 +653,8 @@ function drawMoustacheEmoji({ ctx, landmarks }) {
     (rightCheek.y - leftCheek.y) * canvas.height,
   );
 
-  ctx.font = `${faceWidth * 0.1}px Arial`;
-  ctx.fillText('🥸', moustacheX, moustacheY);
+  ctx.font = `${faceWidth * 0.2}px ${systemFont}`;
+  ctx.fillText(emoji, position.x, position.y);
 }
 
 function drawMoustache({ ctx, landmarks }) {
@@ -675,7 +683,7 @@ function drawFaceWord({ ctx, landmarks, word }) {
 
   ctx.save();
   // Let's change the canvas position to draw rotated
-  ctx.font = `24px Arial`;
+  ctx.font = `24px ${systemFont}`;
   ctx.translate(foreheadX, foreheadY);
   ctx.rotate(angleRadians);
   ctx.scale(-1, -1);
@@ -1093,7 +1101,7 @@ function makeEyeEmojiDrawer() {
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.save();
-  ctx.font = '24px Arial';
+  ctx.font = `24px ${headerFont}, ${systemFont}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
@@ -1106,7 +1114,7 @@ function drawWord({ ctx, word = 'Pineapple' } = {}) {
   }
 
   ctx.fillStyle = 'white';
-  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+  ctx.shadowColor = 'rgba(0, 0, 0, .85)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
   ctx.fillText(word, boxWidth / 2 + boxPosition.x, boxPosition.y + padding);
 
   ctx.restore();
