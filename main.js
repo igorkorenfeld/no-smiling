@@ -1,3 +1,4 @@
+
 /* __________ @SEC: TODO IMPORTS __________ */
 // 
 import { FaceMesh } from '@mediapipe/face_mesh';
@@ -20,6 +21,14 @@ const systemFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 moustche.src = './moustache.png';
 
 /* __________ @SEC: GAMESTATE  __________ */
+// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
+let showAction = false;
+let currentActionIndex = -1;
+
+let actionStartTime = 0;
+const ACTION_INTERVAL = 5_000;
+let actionsIntervalId = null;
+
 const gameConfig = {
   smileLimit: 3,
   actionInterval: 5_000,
@@ -116,12 +125,19 @@ function handleStart() {
   const selectedId = cameraSelect.value || currentDeviceId;
   if (selectedId) startCamera(selectedId);
   gameState.gameStartTime = performance.now();
+  startActions();
+
 }
 
 function handleStop() {
   if (camera) {
     camera.stop();
     camera = null;
+  }
+  if (actionsIntervalId) {
+    clearInterval(actionsIntervalId);
+    console.log(`removed active action interval id:${actionsIntervalId}`);
+    actionsIntervalId = null;
   }
 }
 
@@ -289,7 +305,7 @@ async function run() {
   // Ask for permission once so device labels are available
   await navigator.mediaDevices.getUserMedia({ video: true });
   await listCameras();
-  startActions();
+  // startActions();
 }
 
 const tempAction = createPreviousFaceAction();
@@ -391,6 +407,58 @@ function handleSmile(isSimling, ctx) {
 
 }
 
+function makeJoke() {
+  const lines = [
+    'Knock Knock',
+    'Who is there?',
+    'KGB',
+    'KGB Who?',
+    'We\'ll be asking the questions around here!',
+  ]
+
+  const startTime = performance.now();
+  const totalTime = 5_000;
+  const timePerLine = (totalTime) / lines.length / 1000;
+
+  return function writeOutJokes() {
+    const elapsed = (performance.now() - actionStartTime) / 1000;
+    let currentLine = Math.floor(elapsed / timePerLine);
+    if (currentLine >= lines.length) {
+      currentLine = lines.length - 1;
+    }
+    console.log(`startTime: ${startTime}`);
+    console.log(`elapsed: ${elapsed}, timePerLine: ${timePerLine}`);
+    console.log(`currentLine : ${currentLine}`);
+    ctx.save();
+    ctx.font = `24px ${headerFont}, ${systemFont}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    const padding = 16;
+    const textWidth = ctx.measureText(lines[currentLine]).width;
+
+    ctx.fillStyle = 'white';
+    ctx.shadowColor = 'rgba(0, 0, 0, .85)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+    ctx.fillText(lines[currentLine], canvas.width / 2, 20);
+
+    ctx.restore();
+
+  }
+
+  // function drawLine(t) {
+  //   if (performance.now() - startTime >= totalTime) {
+  //     if (animationId) {
+  //       cancelAnimationFrame(animationId)
+  //     }
+  //   }
+  //
+  //
+  //   requestAnimationFrame(drawLine);
+  // }
+  //
+  // requestAnimationFrame(drawLine);
+}
+
 function updateGameState() {
   //Case 1 smile counts
   //Case 2 smile after cutoff time
@@ -407,8 +475,9 @@ function updateGameState() {
 }
 
 function handleGameOver() {
-  // flash.drawFlash(ctx, canvas);
+  flash.drawFlash(ctx, canvas);
   console.log("Game over");
+  setTimeout(handleStop, 500);
 }
 
 
@@ -437,13 +506,19 @@ const faceOutlinePts = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 28
 /* __________ @SEC: ACTION HELPERS __________ */
 
 function startActions() {
-  setInterval(() => {
+  if (actionsIntervalId) {
+    clearInterval(actionsIntervalId);
+    console.log(`removed previous action interval id:${actionsIntervalId}`);
+  }
+  actionsIntervalId = setInterval(() => {
     // TODO: redo once decide on number of actions
+    if (performance.now() - gameState.gameStartTime < 5_000) return;
     currentActionIndex = (currentActionIndex + 1) % (actions.length);
     console.log(`current action index: ${currentActionIndex}`);
     showAction = true;
     actionStartTime = performance.now();
   }, ACTION_INTERVAL)
+  console.log(`Start action interval id ${actionsIntervalId}`);
 }
 
 function addOverlay(ctx, landmarks, image, currentTime) {
@@ -588,11 +663,11 @@ function addTimer({ ctx, startTime }) {
   const elasped = performance.now() - startTime;
   const seconds = Math.floor(elasped / 1_000);
   const minutes = Math.floor(seconds / 60);
-  // console.log(`${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`);
-  const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+  // console.log(`${ minutes.toString().padStart(2, '0') }: ${(seconds % 60).toString().padStart(2, '0')} `);
+  const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')} `;
 
   ctx.save();
-  ctx.font = `20px ${headerFont}, ${systemFont}`;
+  ctx.font = `20px ${headerFont}, ${systemFont} `;
   ctx.fillStyle = 'white';
   ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
   // ctx.textAlign = 'center';
@@ -606,40 +681,32 @@ function addTimer({ ctx, startTime }) {
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  // { fn: drawFaceWord, config: { word: 'Sus' } },
-  { fn: drawFaceWord, config: { word: 'Coward' } },
-  { fn: drawFaceWord, config: { word: 'Dingus' } },
-  { fn: drawFaceWord, config: { word: 'Doofus' } },
+  { fn: makeJoke(), duration: 5_000, },
+  // { fn: drawFaceWord, config: { word: 'Coward' } },
+  // { fn: drawFaceWord, config: { word: 'Dingus' } },
+  // { fn: drawFaceWord, config: { word: 'Doofus' } },
   // { fn: drawEmojiBelowNose },
-  // { fn: drawEyeLine },
-  { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
+  // { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
   // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   // { fn: createPreviousFaceAction(), duration: 5_000, },
   // { fn: drawFaceUpsideDown, duration: 5_000, },
-  { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
-  { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
-  { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
-  { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
+  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
+  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
+  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
+  // { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
   // { fn: drawMouthOnly, duration: 3_000, },
   // { fn: drawMultiFace, duration: 3_000 },
   // { fn: drawMoustache, duration: 3_000 },
   // { fn: drawMouthOnEyes },
   // { fn: drawSeeThroughMouth },
-  { fn: drawEmojiAroundMouth },
-  { fn: makeEyeEmojiDrawer(), duration: 5_000 },
+  // { fn: drawEmojiAroundMouth },
+  // { fn: makeEyeEmojiDrawer(), duration: 5_000 },
+  // { fn: drawEyeLine },
+  // { fn: drawFaceWord, config: { word: 'Sus' } },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];
-
-// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
-let showAction = false;
-let currentActionIndex = -1;
-
-let actionStartTime = 0;
-const ACTION_INTERVAL = 5_000;
-
-
 
 function drawEmojiBelowNose({ ctx, landmarks, emoji = '🍤' } = {}) {
   // const moustachePoint = landmarks[164];
@@ -653,7 +720,7 @@ function drawEmojiBelowNose({ ctx, landmarks, emoji = '🍤' } = {}) {
     (rightCheek.y - leftCheek.y) * canvas.height,
   );
 
-  ctx.font = `${faceWidth * 0.2}px ${systemFont}`;
+  ctx.font = `${faceWidth * 0.2}px ${systemFont} `;
   ctx.fillText(emoji, position.x, position.y);
 }
 
@@ -683,7 +750,7 @@ function drawFaceWord({ ctx, landmarks, word }) {
 
   ctx.save();
   // Let's change the canvas position to draw rotated
-  ctx.font = `24px ${systemFont}`;
+  ctx.font = `24px ${systemFont} `;
   ctx.translate(foreheadX, foreheadY);
   ctx.rotate(angleRadians);
   ctx.scale(-1, -1);
@@ -880,7 +947,7 @@ function drawEmojiAroundMouth({ ctx, landmarks }) {
     ctx.font = `${mouthBox.h * 0.75}px Arial`;
     const offset = position.y > midPoint ? 5 : -5;
     ctx.translate(Math.round(position.x - (ctx.measureText(emoji).width / 2)), position.y + offset);
-    console.log(`emoji width ${ctx.measureText(emoji).width}`);
+    console.log(`emoji width ${ctx.measureText(emoji).width} `);
     ctx.rotate(getFaceAngle({ landmarks }));
     ctx.scale(-1, -1);
     ctx.fillText(emoji, 0, 0);
@@ -926,7 +993,7 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
   }
 
 
-  console.log(`Redner width: ${leftRenderWidth}`);
+  console.log(`Redner width: ${leftRenderWidth} `);
 
   console.log(mouthOffset);
 
@@ -1101,7 +1168,7 @@ function makeEyeEmojiDrawer() {
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.save();
-  ctx.font = `24px ${headerFont}, ${systemFont}`;
+  ctx.font = `24px ${headerFont}, ${systemFont} `;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
@@ -1272,4 +1339,5 @@ run();
 //   if (count === 0) return 0;
 //   return totalDist / count;
 // }
+
 
