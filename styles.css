@@ -9,8 +9,30 @@
   font-weight: regular;
 }
 
+:root {
+  --color-bg: #FFFCEF;
+
+  --color-primary-100: #CCE6D4;
+  --color-primary-200: #75B389;
+  --color-primary-300: #3F7A52;
+  --color-primary-400: #30543C;
+  --color-primary-500: #184025;
+  --color-primary-700: #053013;
+  --color-primary-800: #03260E;
+
+  --color-secondary-400: #F28177;
+  --color-secondary-500: #D43C2E;
+  --color-secondary-600: #9B2C22; /* start*/
+  --color-secondary-700: #7B2821;
+  --color-secondary-800: #691E17;
+  --color-secondary-900: #3A0707;
+
+  --font-ui: 'Istok-web';
+}
+
 body {
   /* background-image: url(./pattern_01.svg); */
+  background-color: var(--color-bg);
 }
 
 video { 
@@ -24,8 +46,69 @@ video {
 h1 {
   font-family: 'Michroma';
   font-size: 38px;
+  text-transform: uppercase;
+  color: var(--color-primary-700);
+  border-top: 4px solid var(--color-primary-700);
+  position: relative;
+  max-width: 360px;
+  margin-top: 20px;
 }
 
+h1:before, h1:after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  background-color: var(--color-primary-700);
+  margin-top: 4px;
+  left: 0
+}
+
+h1:before {
+  top: -16px;
+}
+
+h1:after {
+  top: -24px;
+}
+
+button {
+  font-family: var(--font-ui);
+  font-size: 16px;
+  padding: 12px 16px;
+  letter-spacing: 1px;
+  border: none;
+  border-radius: 2px;
+}
+
+.button--primary {
+  color: var(--color-bg);
+  background-color: var(--color-primary-500);
+  text-transform: uppercase;
+}
+
+.button--primary:hover {
+  background-color: var(--color-primary-700);
+}
+
+.button--primary:active {
+  background-color: var(--color-primary-800);
+}
+
+.button--secondary {
+  color: var(--color-bg);
+  background-color: var(--color-secondary-600);
+  text-transform: uppercase;
+}
+
+.button--secondary:hover {
+  background-color: var(--color-secondary-700);
+}
+
+
+.button--secondary:active {
+  background-color: var(--color-secondary-800);
+}
 .canvas__container {
   width: 100%;
   max-width: 400px;
