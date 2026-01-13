@@ -96,25 +96,75 @@ async function listCameras() {
 
 // Start MediaPipe camera for a given deviceId
 async function startCamera(deviceId) {
+  // Reset camera/media pipe first
   if (camera) {
     camera.stop();
     camera = null;
   }
 
+  if (videoElement.srcObject instanceof MediaStream) {
+    videoElement.srcObject.getTracks().forEach(t => t.stop());
+    videoElement.srcObject = null;
+  }
+
   currentDeviceId = deviceId;
 
-  // MediaPipe Camera util accepts a video element and onFrame callback
-  camera = new Camera(videoElement, {
-    onFrame: async () => {
-      await faceMesh.send({ image: videoElement });
-    },
-    width: 640,
-    height: 480,
-    facingMode: 'user',
-    deviceId: deviceId, // custom field; many people pass through constraints here
-  });
+  try {
 
-  camera.start();
+    const constraints = {
+      video: {
+        deviceId: deviceId ? { exact: deviceId } : undefined,
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        facingMode: 'user',
+      }
+    };
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    videoElement.srcObject = stream;
+    await new Promise((resolve, reject) => {
+      videoElement.onloadedmetadata = () => {
+        videoElement.onloadedmetadata = null;
+        resolve();
+      };
+      videoElement.onerror = (e) => {
+        videoElement.onerror = null;
+        reject(e);
+      }
+    });
+
+    await videoElement.play();
+    camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoElement });
+      },
+      width: 640,
+      height: 480,
+    });
+    camera.start();
+    return true;
+  }
+  catch (err) {
+    console.error('Failed to start camera:', err);
+    // Make sure stream is cleaned up on failure
+    if (videoElement.srcObject instanceof MediaStream) {
+      videoElement.srcObject.getTracks().forEach(t => t.stop());
+      videoElement.srcObject = null;
+    }
+    return false; // failure
+  }
+  //
+  // // MediaPipe Camera util accepts a video element and onFrame callback
+  // camera = new Camera(videoElement, {
+  //   onFrame: async () => {
+  //     await faceMesh.send({ image: videoElement });
+  //   },
+  //   width: 640,
+  //   height: 480,
+  //   facingMode: 'user',
+  //   deviceId: deviceId, // custom field; many people pass through constraints here
+  // });
+  //
+  // camera.start();
 }
 
 // Simple wrappers for buttons
@@ -123,10 +173,21 @@ function handleStart() {
     return;
   }
   const selectedId = cameraSelect.value || currentDeviceId;
-  if (selectedId) startCamera(selectedId);
-  gameState.gameStartTime = performance.now();
-  startActions();
+  if (selectedId) {
+    const isStarted = startCamera(selectedId);
+    if (isStarted) {
+      gameState.gameStartTime = performance.now();
+      startActions();
+      updateStartStopButtons();
+    }
+  }
+  // btnStop.classList.remove('hidden');
+  // btnStart.classList.add('hidden');
+}
 
+function updateStartStopButtons() {
+  btnStart.classList.toggle("hidden");
+  btnStop.classList.toggle("hidden");
 }
 
 function handleStop() {
@@ -139,6 +200,7 @@ function handleStop() {
     console.log(`removed active action interval id:${actionsIntervalId}`);
     actionsIntervalId = null;
   }
+  updateStartStopButtons();
 }
 
 // When camera selection changes, restart with new device
@@ -1203,7 +1265,7 @@ function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
   ctx.restore();
 }
 
-function draw3DOrbitingImage({ ctx, landmarks, moon = '🦆🦅🦅', startTime } = {}) {
+function draw3DOrbitingImage({ ctx, landmarks, moon = '🍑', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
 
