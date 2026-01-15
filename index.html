@@ -7,29 +7,36 @@
   <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&display=swap"> -->
   <link rel="stylesheet" type="text/css" href="reset.css" />
   <link rel="stylesheet" type="text/css" href="styles.css" />
-  <style>
-    video { display: none; }
-    canvas { transform: scaleX(1); } /* mirror to feel natural */
-  </style>
 
   <!-- MediaPipe core + camera utils + FaceMesh -->
   <!-- <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script> -->
   <!-- <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script> -->
   <!-- <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script> -->
 </head>
-<body>
-  <h1 class="title"> No Smiling </h1>
-  <select id="camera-select"></select>
-  <button id="video__start" class="button--primary">Start</button>
+  <body>
+    <main>
+      <h1 class="title"> No Smiling </h1>
+        <div class="description">
+          <p>
+            It is time for your identification photo session. We will attempt to take your photo. <span class="text-secondary-600">You may not smile for this photo.</span>
+          </p>
+          <p>
+            We are aware the camera feed has some inconsistencies. You should sit for the photo as long as is necessary. No matter the circumstance, <strong class="text-secondary-600"> do not smile.</strong>
+          </p>
+        </div>
+        <label for="camera-select" class="select__label">Select your camera</label>
+        <select id="camera-select"></select>
+        <button id="video__start" class="button--primary">Start</button>
 
-  <video id="video" class="input_video" playsinline></video>
-    <div class="canvas__container">
-      <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
-    </div>
+      <video id="video" class="input_video" playsinline></video>
+      <div class="canvas__container">
+        <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
+      </div>
       <canvas id="c2" class="temp_canvas hidden" width="640" height="480"></canvas>
-  <button id="video__stop" class="button--secondary">Stop</button>
+      <button id="video__stop" class="button--secondary hidden">Stop</button>
+    </main>
 
-  <script type="module" src="./main.js"></script>
-</body>
+    <script type="module" src="./main.js"></script>
+  </body>
 </html>
 
