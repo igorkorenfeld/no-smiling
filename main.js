@@ -14,6 +14,7 @@ const ctx = canvas.getContext('2d');
 const cameraSelect = document.getElementById('camera-select');
 const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
+const retrySection = document.querySelector('.retry');
 const moustche = new Image();
 const mainfont = new FontFace('Michroma', 'url("fonts/Michroma/Michroma-Regular.ttf")');
 const headerFont = 'Michroma';
@@ -44,6 +45,17 @@ const gameState = {
   lastSmileTime: 0,
   gracePeriod: true,
   gameStartTime: 0,
+}
+
+function resetGameState() {
+  gameState.smileCount = 0;
+  gameState.timeCutOff = false;
+  gameState.activeSmile = false;
+  gameState.gameOver = false;
+  gameState.smilesLeft = 3;
+  gameState.lastSmileTime = 0;
+  gameState.gracePeriod = true;
+  gameState.gameStartTime = 0;
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
@@ -178,17 +190,30 @@ function handleStart() {
     if (isStarted) {
       gameState.gameStartTime = performance.now();
       startActions();
-      updateStartStopButtons();
+      btnStart.classList.add('hidden');
+      btnStop.classList.remove('hidden');
+      const intro = document.querySelector('.inital__wrapper');
+      document.querySelector('.canvas__container').classList.remove('hidden');
+      // intro.classList.add("hidden");
+      fadeOut(intro)
     }
   }
-  // btnStop.classList.remove('hidden');
-  // btnStart.classList.add('hidden');
 }
 
-function updateStartStopButtons() {
-  btnStart.classList.toggle("hidden");
-  btnStop.classList.toggle("hidden");
+function fadeOut(el, duration = 350) {
+  el.classList.add("fadeout");
+  setTimeout(() => {
+    el.classList.add("hidden");
+  }, duration);
+
 }
+
+
+function updateRetryState() {
+  btnStop.classList.toggle('hidden');
+  retrySection.classList.toggle('hidden');
+}
+
 
 function handleStop() {
   if (camera) {
@@ -200,8 +225,15 @@ function handleStop() {
     console.log(`removed active action interval id:${actionsIntervalId}`);
     actionsIntervalId = null;
   }
-  updateStartStopButtons();
+  updateRetryState();
 }
+
+function handleRetry() {
+  updateRetryState();
+  resetGameState();
+  handleStart();
+}
+
 
 // When camera selection changes, restart with new device
 cameraSelect.addEventListener('change', () => {
@@ -211,6 +243,7 @@ cameraSelect.addEventListener('change', () => {
 
 btnStart.addEventListener('click', handleStart);
 btnStop.addEventListener('click', handleStop);
+document.querySelector('#retry__btn').addEventListener('click', handleRetry);
 
 
 /* __________ @SEC: UTILITIES __________ */
