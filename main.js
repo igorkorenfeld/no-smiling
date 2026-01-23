@@ -16,10 +16,10 @@ const btnStart = document.getElementById('video__start');
 const btnStop = document.getElementById('video__stop');
 const retrySection = document.querySelector('.retry');
 const moustche = new Image();
+moustche.src = './moustache.png';
 const mainfont = new FontFace('Michroma', 'url("fonts/Michroma/Michroma-Regular.ttf")');
 const headerFont = 'Michroma';
 const systemFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
-moustche.src = './moustache.png';
 
 /* __________ @SEC: GAMESTATE  __________ */
 // TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
@@ -32,7 +32,7 @@ let actionsIntervalId = null;
 
 const gameConfig = {
   smileLimit: 3,
-  actionInterval: 5_000,
+  actionInterval: 8_000,
   graceTime: 3_000,
 }
 
@@ -45,6 +45,7 @@ const gameState = {
   lastSmileTime: 0,
   gracePeriod: true,
   gameStartTime: 0,
+  actionOrder: [],
 }
 
 function resetGameState() {
@@ -189,6 +190,7 @@ function handleStart() {
     const isStarted = startCamera(selectedId);
     if (isStarted) {
       gameState.gameStartTime = performance.now();
+      gameState.actionOrder = createActionOrder();
       startActions();
       btnStart.classList.add('hidden');
       btnStop.classList.remove('hidden');
@@ -198,6 +200,8 @@ function handleStart() {
       fadeOut(intro)
     }
   }
+  console.log("action order");
+  console.log(createActionOrder());
 }
 
 function fadeOut(el, duration = 350) {
@@ -209,9 +213,19 @@ function fadeOut(el, duration = 350) {
 }
 
 
-function updateRetryState() {
-  btnStop.classList.toggle('hidden');
-  retrySection.classList.toggle('hidden');
+// function updateRetryState() {
+//   btnStop.classList.toggle('hidden');
+//   retrySection.classList.toggle('hidden');
+// }
+
+function showRetryState() {
+  btnStop.classList.add('hidden');
+  retrySection.classList.remove('hidden');
+}
+
+function hideRetryState() {
+  btnStop.classList.remove('hidden');
+  retrySection.classList.add('hidden');
 }
 
 
@@ -225,11 +239,11 @@ function handleStop() {
     console.log(`removed active action interval id:${actionsIntervalId}`);
     actionsIntervalId = null;
   }
-  updateRetryState();
+  showRetryState();
 }
 
 function handleRetry() {
-  updateRetryState();
+  hideRetryState();
   resetGameState();
   handleStart();
 }
@@ -502,7 +516,7 @@ function handleSmile(isSimling, ctx) {
 
 }
 
-function makeJoke() {
+function makeJoke(duration = 5_000) {
   const lines = [
     'Knock Knock',
     'Who is there?',
@@ -512,7 +526,7 @@ function makeJoke() {
   ]
 
   const startTime = performance.now();
-  const totalTime = 5_000;
+  const totalTime = duration;
   const timePerLine = (totalTime) / lines.length / 1000;
 
   return function writeOutJokes() {
@@ -521,11 +535,11 @@ function makeJoke() {
     if (currentLine >= lines.length) {
       currentLine = lines.length - 1;
     }
-    console.log(`startTime: ${startTime}`);
-    console.log(`elapsed: ${elapsed}, timePerLine: ${timePerLine}`);
-    console.log(`currentLine : ${currentLine}`);
+    // console.log(`startTime: ${startTime}`);
+    // console.log(`elapsed: ${elapsed}, timePerLine: ${timePerLine}`);
+    // console.log(`currentLine : ${currentLine}`);
     ctx.save();
-    ctx.font = `24px ${headerFont}, ${systemFont}`;
+    ctx.font = `16px ${headerFont}, ${systemFont}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
@@ -606,23 +620,22 @@ function startActions() {
     console.log(`removed previous action interval id:${actionsIntervalId}`);
   }
   actionsIntervalId = setInterval(() => {
-    // TODO: redo once decide on number of actions
-    if (performance.now() - gameState.gameStartTime < 5_000) return;
+    if (performance.now() - gameState.gameStartTime < gameConfig.actionInterval) return;
     currentActionIndex = (currentActionIndex + 1) % (actions.length);
     console.log(`current action index: ${currentActionIndex}`);
     showAction = true;
     actionStartTime = performance.now();
-  }, ACTION_INTERVAL)
+  }, gameConfig.actionInterval)
   console.log(`Start action interval id ${actionsIntervalId}`);
 }
 
 function addOverlay(ctx, landmarks, image, currentTime) {
 
-  const DEFAULT_DURATION = 2_000;
+  const DEFAULT_DURATION = 2_500;
 
   if (currentActionIndex < 0 || !showAction) return;
 
-  const action = actions[currentActionIndex];
+  const action = actions[gameState.actionOrder[currentActionIndex]];
 
   if (action.config) {
     action.fn({ ctx, landmarks, image, ...action.config });
@@ -769,39 +782,50 @@ function addTimer({ ctx, startTime }) {
   ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
 
   ctx.restore();
-  console.log(text);
+  // console.log(text);
 }
 
 
 /* __________ @SEC: ACTIONS __________ */
 
 const actions = [
-  { fn: makeJoke(), duration: 5_000, },
-  // { fn: drawFaceWord, config: { word: 'Coward' } },
-  // { fn: drawFaceWord, config: { word: 'Dingus' } },
-  // { fn: drawFaceWord, config: { word: 'Doofus' } },
-  // { fn: drawEmojiBelowNose },
-  // { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
-  // { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
-  // { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
-  // { fn: createPreviousFaceAction(), duration: 5_000, },
-  // { fn: drawFaceUpsideDown, duration: 5_000, },
-  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
-  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
-  // { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
-  // { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
-  // { fn: drawMouthOnly, duration: 3_000, },
-  // { fn: drawMultiFace, duration: 3_000 },
-  // { fn: drawMoustache, duration: 3_000 },
-  // { fn: drawMouthOnEyes },
-  // { fn: drawSeeThroughMouth },
-  // { fn: drawEmojiAroundMouth },
-  // { fn: makeEyeEmojiDrawer(), duration: 5_000 },
-  // { fn: drawEyeLine },
-  // { fn: drawFaceWord, config: { word: 'Sus' } },
+  { fn: makeJoke(6_000), duration: 6_000, },
+  { fn: drawFaceWord, config: { word: 'Coward' } },
+  { fn: drawFaceWord, config: { word: 'Dingus' } },
+  { fn: drawFaceWord, config: { word: 'Doofus' } },
+  { fn: drawEmojiBelowNose },
+  { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
+  { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
+  { fn: createPreviousFaceAction(), duration: 5_000, },
+  { fn: drawFaceUpsideDown, duration: 5_000, },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
+  { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
+  { fn: drawMouthOnly, duration: 3_000, },
+  { fn: drawMultiFace, duration: 3_000 },
+  { fn: drawMoustache, duration: 3_000 },
+  { fn: drawMouthOnEyes },
+  { fn: drawSeeThroughMouth },
+  { fn: drawEmojiAroundMouth },
+  { fn: makeEyeEmojiDrawer(), duration: 5_000 },
+  { fn: drawEyeLine },
+  { fn: drawFaceWord, config: { word: 'Sus' } },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];
+
+function createActionOrder() {
+  const order = Array.from({ length: actions.length }, (_, i) => i);
+
+  let i = order.length;
+  while (--i > 0) {
+    let j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
 
 function drawEmojiBelowNose({ ctx, landmarks, emoji = '🍤' } = {}) {
   // const moustachePoint = landmarks[164];
