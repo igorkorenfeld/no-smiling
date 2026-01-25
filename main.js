@@ -40,6 +40,7 @@ const gameState = {
   smileCount: 0,
   timeCutOff: false,
   activeSmile: false,
+  showSmileText: false,
   gameOver: false,
   smilesLeft: 3,
   lastSmileTime: 0,
@@ -52,6 +53,7 @@ function resetGameState() {
   gameState.smileCount = 0;
   gameState.timeCutOff = false;
   gameState.activeSmile = false;
+  gameState.showSmileText = false;
   gameState.gameOver = false;
   gameState.smilesLeft = 3;
   gameState.lastSmileTime = 0;
@@ -137,6 +139,8 @@ async function startCamera(deviceId) {
     await new Promise((resolve, reject) => {
       videoElement.onloadedmetadata = () => {
         videoElement.onloadedmetadata = null;
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
         resolve();
       };
       videoElement.onerror = (e) => {
@@ -478,6 +482,15 @@ function onResults(results) {
     }
 
     handleSmile(isSmiling, ctx);
+    if (gameState.activeSmile) {
+      gameState.showSmileText = true;
+      setTimeout(() => {
+        gameState.showSmileText = false;
+      }, 2_000)
+    }
+    if (gameState.showSmileText) {
+      addSmilingText(ctx);
+    }
     updateGameState();
     if (gameState.gameOver) {
       handleGameOver();
@@ -492,7 +505,6 @@ function onResults(results) {
 function handleSmile(isSimling, ctx) {
 
   if (isSimling) {
-    addSmilingText(ctx);
     const now = performance.now();
     const SMILE_TIME_TOLERANCE = 850
     // Dislay similing text
@@ -503,6 +515,7 @@ function handleSmile(isSimling, ctx) {
       gameState.lastSmileTime = performance.now();
       return;
     }
+    addSmilingText(ctx);
 
     console.log(`activeSmile: ${gameState.activeSmile}`);
     console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
@@ -522,7 +535,7 @@ function makeJoke(duration = 5_000) {
     'Who is there?',
     'KGB',
     'KGB Who?',
-    'We\'ll be asking the questions around here!',
+    'We\'ll be asking \nthe questions \naround here!',
   ]
 
   const startTime = performance.now();
@@ -543,12 +556,21 @@ function makeJoke(duration = 5_000) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
-    const padding = 16;
-    const textWidth = ctx.measureText(lines[currentLine]).width;
+    const topPadding = 20;
+    const lineHeight = 20;
 
     ctx.fillStyle = 'white';
     ctx.shadowColor = 'rgba(0, 0, 0, .85)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
-    ctx.fillText(lines[currentLine], canvas.width / 2, 20);
+    if (lines[currentLine].includes('\n')) {
+      const sublines = lines[currentLine].split('\n');
+      sublines.forEach((subline, i) => {
+        ctx.fillText(subline, canvas.width / 2, topPadding + (i * lineHeight));
+      });
+    }
+    else {
+      ctx.fillText(lines[currentLine], canvas.width / 2, topPadding);
+    }
+
 
     ctx.restore();
 
@@ -708,10 +730,10 @@ function addSmilingText(ctx) {
     y: canvas.height - FONT_SIZE - paddingY,
   }
 
-  ctx.fillStyle = gameState.gracePeriod ? 'green' : 'white';
-  ctx.shadowColor = 'rgba(0, 0, 0, .25)';
+  ctx.fillStyle = gameState.gracePeriod ? 'rgba(232, 180, 22, 1)' : 'rgba(245, 60, 60, 1)';
+  ctx.shadowColor = 'rgba(0, 0, 0, .65)';
   ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 2;
+  ctx.shadowOffsetY = 3;
   ctx.shadowBlur = 6;
   ctx.fillText(MSG, boxWidth / 2 + boxPosition.x, boxPosition.y);
   ctx.restore();
@@ -797,20 +819,20 @@ const actions = [
   { fn: drawWord, duration_: 5_000, config: { word: 'MOIST' } },
   { fn: drawOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
   { fn: draw3DOrbitingImage, duration: 5_000, config: { startTime: performance.now() } },
-  { fn: createPreviousFaceAction(), duration: 5_000, },
-  { fn: drawFaceUpsideDown, duration: 5_000, },
+  { fn: createPreviousFaceAction(), duration: 6_000, },
+  { fn: drawFaceUpsideDown, duration: 6_000, },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
   { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
-  { fn: drawMouthOnly, duration: 3_000, },
-  { fn: drawMultiFace, duration: 3_000 },
-  { fn: drawMoustache, duration: 3_000 },
+  { fn: drawMouthOnly, duration: 4_000, },
+  { fn: drawMultiFace, duration: 4_000 },
+  { fn: drawMoustache, duration: 4_000 },
   { fn: drawMouthOnEyes },
   { fn: drawSeeThroughMouth },
   { fn: drawEmojiAroundMouth },
-  { fn: makeEyeEmojiDrawer(), duration: 5_000 },
-  { fn: drawEyeLine },
+  { fn: makeEyeEmojiDrawer(), duration: 6_000 },
+  // { fn: drawEyeLine },
   { fn: drawFaceWord, config: { word: 'Sus' } },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
@@ -1287,7 +1309,8 @@ function makeEyeEmojiDrawer() {
 
 function drawWord({ ctx, word = 'Pineapple' } = {}) {
   ctx.save();
-  ctx.font = `24px ${headerFont}, ${systemFont} `;
+  const fontSize = window.innerWidth > 640 ? 24 : 18;
+  ctx.font = `${fontSize}px ${headerFont}, ${systemFont} `;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 
@@ -1322,7 +1345,7 @@ function drawOrbitingImage({ ctx, landmarks, moon = '🌭', startTime } = {}) {
   ctx.restore();
 }
 
-function draw3DOrbitingImage({ ctx, landmarks, moon = '🍑', startTime } = {}) {
+function draw3DOrbitingImage({ ctx, landmarks, moon = '🦆', startTime } = {}) {
   const { x: cx, y: cy, r } = getFaceCenterRadius(landmarks);
   const angle = getOrbitAngle(startTime);
 
