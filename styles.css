@@ -48,12 +48,23 @@ html {
 
 body {
   background: 
-    url('ooi_logo_extended-05.svg'),
+    url('ooi_logo_extended-07.svg'),
     var(--color-bg);
-  background-position: 40vw 25vh;
-  background-size: 100%;
+  /* background-position: calc(100vw - (133vmin / 2)) 5vh; */
+  background-position: 20vw 100vh;
+  background-size: 140vmin;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
+
+  @media screen and (min-width: 640px) {
+    background-size: 100vmin;
+    background-position: 40vw 32vh;
+  }
+
+  @media screen and (min-width: 960px) {
+    background-size: 90vmin;
+    background-position: 40vw 25vh;
+  }
 }
 
 video { 
@@ -68,7 +79,12 @@ video {
 
 main {
   margin: 0 auto;
-  max-width: 680px;
+  max-width: 640px;
+  padding: 1rem;
+
+  @media screen and (min-width: 640px) {
+    padding: 0;
+  }
 }
 
 /* canvas {  */
@@ -77,18 +93,21 @@ main {
 
 h1 {
   font-family: 'Michroma';
-  font-size: 2em;
+  font-size: 2.25em;
+  font-size: clamp(2.25rem, -0.6429rem + 12.8571vw, 4.5rem);
+  line-height: 1;
   text-transform: uppercase;
   color: var(--color-primary-700);
   border-top: 4px solid var(--color-primary-700);
   position: relative;
   /* max-width: 360px; */
-  margin-top: 20px;
+  padding-top: 0.5rem;
+  margin-top: 1.25rem;
   /* text-align: center; */
   margin-bottom: 1rem;
 
-  @media screen and (min-width: 680px) {
-    font-size: 3.25em;
+  @media screen and (min-width: 640px) {
+    /* font-size: 3.25em; */
     margin-bottom: 1.5rem;
   }
 
@@ -205,7 +224,6 @@ select:active {
 
 .canvas__container {
   width: 100%;
-  max-width: 400px;
   aspect-ratio: 9 / 16;
   max-height: 90vh;
   /* margin: 0 auto; */
@@ -216,7 +234,7 @@ select:active {
 
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .canvas__container {
     width: 90vw;
     aspect-ratio: 4 / 3;  
