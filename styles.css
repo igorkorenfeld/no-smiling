@@ -51,7 +51,7 @@ body {
     url('ooi_logo_extended-07.svg'),
     var(--color-bg);
   /* background-position: calc(100vw - (133vmin / 2)) 5vh; */
-  background-position: 20vw 100vh;
+  background-position: 20vw 50vh;
   background-size: 140vmin;
   background-repeat: no-repeat;
   background-attachment: scroll;
@@ -136,7 +136,7 @@ h1:after {
 }
 
 
-.description, 
+.instructions,
 .retry {
   font-family: var(--font-ui);
   font-size: 1.125rem;
@@ -145,7 +145,7 @@ h1:after {
   max-width: 72ex;
 } 
 
-.description p {
+.instructions p {
   margin-bottom: 0.5rem;
 }
 
@@ -249,10 +249,6 @@ select:active {
   display: block;
 }
 
-.hidden {
-  display: none;
-}
-
 .text-secondary-600 {
   color: var(--color-secondary-600); 
 }
@@ -269,14 +265,21 @@ select:active {
   padding: 0.25em 1.5em;
   border: 0.25rem solid var(--color-secondary-500);
   border-radius: 8px;
+  background-color: var(--color-bg);
   color: var(--color-secondary-500);
   display: inline-block;
   text-transform: uppercase;
-  transform: rotate(-5deg);
+  transform: rotate(-12deg) translateY(2rem);
   margin-top: -1.0rem;
   margin-bottom: 2.0rem;
-  opacity: 0.85;
+  opacity: 0.8;
+  position: absolute;
 }
+
+.hidden {
+  display: none;
+}
+
 
 @keyframes fade {
   from {
@@ -289,3 +292,4 @@ select:active {
 
   }
 }
+

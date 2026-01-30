@@ -1,10 +1,11 @@
 
 /* __________ @SEC: TODO IMPORTS __________ */
 // 
-import { FaceMesh } from '@mediapipe/face_mesh';
+// import { FaceMesh } from '@mediapipe/face_mesh';
 import { Camera } from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+// import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 //npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
+import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 
 /* __________ @SEC: DOM CONSTANTS __________ */
 
@@ -65,25 +66,58 @@ function resetGameState() {
 /* Doing this early to help with page load */
 
 // Initialize FaceMesh solution
-const faceMesh = new FaceMesh({
-  locateFile: (file) =>
-    // `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-    `./node_modules/@mediapipe/face_mesh/${file}`
-});
+// const faceMesh = new FaceMesh({
+//   locateFile: (file) =>
+//     // `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+//     `./node_modules/@mediapipe/face_mesh/${file}`
+// });
+//
+// faceMesh.setOptions({
+//   maxNumFaces: 1,
+//   refineLandmarks: false,
+//   minDetectionConfidence: 0.5,
+//   minTrackingConfidence: 0.5,
+// });
+//
+// let faceMeshReady = false;
+// await faceMesh.initialize();
+// faceMeshReady = true;
 
-faceMesh.setOptions({
-  maxNumFaces: 1,
-  refineLandmarks: false,
-  minDetectionConfidence: 0.5,
-  minTrackingConfidence: 0.5,
-});
 
-let faceMeshReady = false;
-await faceMesh.initialize();
-faceMeshReady = true;
+// faceMesh.onResults(onResults);
 
+let faceLandmarker = null;
+async function createFaceLandmarker() {
+  const filesetResolver = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm');
+  faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+    baseOptions: {
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+      delegate: 'GPU',
+    },
+    runningMode: 'VIDEO',
+    numFaces: 1,
+    outputFaceBlendshapes: true,
+    outputFaceLandmarks: true,
+  });
+}
 
-faceMesh.onResults(onResults);
+// faceLandmarker.onResults(onResults);
+
+function detectSmile(results) {
+  console.log(`results:\n`);
+  console.log(results.faceBlendshapes);
+  let isSmiling = false;
+  if (results.faceBlendshapes?.length) {
+    const blendshapes = results.faceBlendshapes[0];
+    const smileLeft = blendshapes.categories[44]?.score || 0;
+    console.log(blendshapes.categories[44]?.score);
+    const smileRight = blendshapes.categories[45]?.score || 0;
+    console.log(`smileLeft :${smileLeft}`);
+    console.log(`smileRight :${smileRight}`);
+    isSmiling = (smileLeft + smileRight) / 2 > 0.5;
+  }
+  return isSmiling;
+}
 
 
 /* __________ @SEC: SETUP - CAMERA  __________ */
@@ -152,7 +186,12 @@ async function startCamera(deviceId) {
     await videoElement.play();
     camera = new Camera(videoElement, {
       onFrame: async () => {
-        await faceMesh.send({ image: videoElement });
+        const results = faceLandmarker.detectForVideo(videoElement, performance.now());
+        // console.log(`results:\n`);
+        // console.log(results);
+        if (results.faceLandmarks) {
+          onResults(results);
+        }
       },
       width: 640,
       height: 480,
@@ -186,9 +225,9 @@ async function startCamera(deviceId) {
 
 // Simple wrappers for buttons
 function handleStart() {
-  if (!faceMeshReady) {
-    return;
-  }
+  // if (!faceMeshReady) {
+  //   return;
+  // }
   const selectedId = cameraSelect.value || currentDeviceId;
   if (selectedId) {
     const isStarted = startCamera(selectedId);
@@ -216,6 +255,10 @@ function fadeOut(el, duration = 350) {
 
 }
 
+function showInsturctions() {
+  const el = document.querySelector('.instructions')
+}
+
 
 // function updateRetryState() {
 //   btnStop.classList.toggle('hidden');
@@ -232,8 +275,17 @@ function hideRetryState() {
   retrySection.classList.add('hidden');
 }
 
+function showFailStamp() {
+  document.querySelector('.stamp__failed').classList.remove('hidden');
+}
+
+function hideFailStamp() {
+  document.querySelector('.stamp__failed').classList.add('hidden');
+}
+
 
 function handleStop() {
+  gameState.gameOver = true;
   if (camera) {
     camera.stop();
     camera = null;
@@ -243,11 +295,13 @@ function handleStop() {
     console.log(`removed active action interval id:${actionsIntervalId}`);
     actionsIntervalId = null;
   }
+  showFailStamp();
   showRetryState();
 }
 
 function handleRetry() {
   hideRetryState();
+  hideFailStamp();
   resetGameState();
   handleStart();
 }
@@ -417,7 +471,9 @@ function getFaceAngle({ landmarks }) {
 async function run() {
   // Ask for permission once so device labels are available
   await navigator.mediaDevices.getUserMedia({ video: true });
+  await createFaceLandmarker();
   await listCameras();
+
   // startActions();
 }
 
@@ -426,6 +482,7 @@ const flash = createFlash(200);
 
 // Called whenever FaceMesh has new results
 function onResults(results) {
+  if (gameState.gameOver) return;
   canvas = document.getElementById('c1');
   const now = performance.now();
   // ctx.save();
@@ -435,12 +492,14 @@ function onResults(results) {
   // ctx.save()
   // ctx.translate(canvas.width, 0);
   // ctx.scale(-1, 1);
-  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
   // ctx.restore()
   // const tempDrawEmoji = makeEyeEmojiDrawer();
 
-  if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
-    const landmarks = results.multiFaceLandmarks[0]; // one face only
+  if (results.faceLandmarks) {
+    const landmarks = results.faceLandmarks[0]; // one face only
+    console.log("landmarks");
+    console.log(landmarks);
 
 
     // drawMouthPoints({ ctx, landmarks });
@@ -460,8 +519,13 @@ function onResults(results) {
 
     // Detect Smile
     // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
-    const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
-    const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
+    // const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
+    // const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
+    let isSmiling = false;
+    isSmiling = detectSmile(results);
+    console.log(`is smiling? ${isSmiling}`);
+
+
 
     //Extract to handle smile
     // drawFaceUpsideDown(ctx, landmarks);
@@ -469,7 +533,7 @@ function onResults(results) {
     // drawMultiFace(ctx, landmarks, results.image);
     // draw3DOrbitingImage({ ctx, landmarks, startTime: gameState.gameStartTime });
 
-    if (!score) return;
+    // if (!score) return;
 
     if (isSmiling) {
       const cx = ((MOUTH.LEFT.x + MOUTH.RIGHT.x) / 2) * canvas.width;
@@ -497,7 +561,7 @@ function onResults(results) {
     };
 
     drawSmilesLeft(ctx);
-    addOverlay(ctx, landmarks, results.image, now);
+    addOverlay(ctx, landmarks, videoElement, now);
   }
 }
 
@@ -824,7 +888,6 @@ const actions = [
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
-  { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
   { fn: drawMouthOnly, duration: 4_000, },
   { fn: drawMultiFace, duration: 4_000 },
   { fn: drawMoustache, duration: 4_000 },
@@ -832,8 +895,9 @@ const actions = [
   { fn: drawSeeThroughMouth },
   { fn: drawEmojiAroundMouth },
   { fn: makeEyeEmojiDrawer(), duration: 6_000 },
-  // { fn: drawEyeLine },
   { fn: drawFaceWord, config: { word: 'Sus' } },
+  // { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
+  // { fn: drawEyeLine },
   // drawMouthOnly(ctx, landmarks, results.image);
   // drawMultiFace(ctx, landmarks, results.image);
 ];

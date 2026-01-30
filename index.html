@@ -18,9 +18,9 @@
       <main>
         <h1 class="title"> No Smiling </h1>
         <div class="inital__wrapper"> 
-          <div class="description">
+          <div class="instructions">
             <p>
-              It is time for your identification photo session. We will attempt to take your photo. <span class="text-secondary-600">You may not smile for this photo.</span>
+              Greetings from the Office of Identification. It is time for your identification photo session. We will attempt to take your photo. <span class="text-secondary-600">You may not smile for this photo.</span>
             </p>
             <p>
               We are aware the camera feed has some inconsistencies. You should sit for the photo as long as is necessary. No matter the circumstance, <strong class="text-secondary-600"> do not smile.</strong>
@@ -32,13 +32,14 @@
         </div>
 
         <video id="video" class="input_video" playsinline></video>
+        <h2 class="stamp__failed hidden">Failed</h2>
         <div class="canvas__container">
           <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
+          <canvas id="c2" class="temp_canvas hidden" width="640" height="480"></canvas>
         </div>
         <button id="video__stop" class="button--secondary hidden">Abandon</button>
         <div class="retry hidden"> 
-          <h2 class="stamp__failed">Failed</h2>
-          <p> You failed to follow the instructions and get a proper photo. You have <strong class="text-secondary-600"> dissapointed </strong> us.</p>
+          <p> You failed to follow the instructions and get a proper photo. This is a <strong class="text-secondary-600"> dissapointment. </strong></p>
           <button id="retry__btn" class="button--primary">Try again?</button>
         </div>
       </main>
