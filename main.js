@@ -48,6 +48,7 @@ const gameState = {
   gracePeriod: true,
   gameStartTime: 0,
   actionOrder: [],
+  lastActionEndTime: 0,
 }
 
 function resetGameState() {
@@ -60,6 +61,7 @@ function resetGameState() {
   gameState.lastSmileTime = 0;
   gameState.gracePeriod = true;
   gameState.gameStartTime = 0;
+  gameState.lastActionEndTime = 0;
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
@@ -501,13 +503,14 @@ function onResults(results) {
     console.log("landmarks");
     console.log(landmarks);
 
+    // addTimer({ ctx, startTime: gameState.gameStartTime });
+
 
     // drawMouthPoints({ ctx, landmarks });
     // drawMoustacheEmoji(ctx, landmarks);
 
     //Draw Eye line
     // drawEyeLine(ctx, landmarks);
-    addTimer({ ctx, startTime: gameState.gameStartTime });
     // tempAction({ ctx, landmarks, image: results.image, });
     // drawMoustache({ ctx, landmarks });
     // drawSeeThroughMouth({ ctx, landmarks, image: results.image });
@@ -719,7 +722,10 @@ function addOverlay(ctx, landmarks, image, currentTime) {
 
   const DEFAULT_DURATION = 2_500;
 
-  if (currentActionIndex < 0 || !showAction) return;
+  if (currentActionIndex < 0 || !showAction) {
+    addCountdowntimer({ ctx, duration: 5_000 });
+    return;
+  };
 
   const action = actions[gameState.actionOrder[currentActionIndex]];
 
@@ -735,6 +741,7 @@ function addOverlay(ctx, landmarks, image, currentTime) {
     // console.log(currentTime);
     // console.log("end of action");
     showAction = false;
+    gameState.lastActionEndTime = performance.now();
   }
 }
 
@@ -869,6 +876,23 @@ function addTimer({ ctx, startTime }) {
 
   ctx.restore();
   // console.log(text);
+}
+
+function addCountdowntimer({ ctx, duration }) {
+  if (gameState.lastActionEndTime <= 0) {
+    gameState.lastActionEndTime = performance.now();
+  }
+  const remain = Math.floor((duration + 1 - (performance.now() - gameState.lastActionEndTime)) / 1_000); // In seconds
+  if (remain < 0) return;
+  const text = `0:${(remain).toString().padStart(2, '0')} `;
+
+  ctx.save();
+  ctx.font = `20px ${headerFont}, ${systemFont} `;
+  ctx.fillStyle = 'white';
+  ctx.shadowColor = 'rgba(0, 0, 0, .25)'; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 2; ctx.shadowBlur = 6;
+  // ctx.textAlign = 'center';
+  ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
+  ctx.restore();
 }
 
 
