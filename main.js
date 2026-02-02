@@ -236,13 +236,14 @@ function handleStart() {
     if (isStarted) {
       gameState.gameStartTime = performance.now();
       gameState.actionOrder = createActionOrder();
-      startActions();
       btnStart.classList.add('hidden');
       btnStop.classList.remove('hidden');
       const intro = document.querySelector('.inital__wrapper');
-      document.querySelector('.canvas__container').classList.remove('hidden');
+      // document.querySelector('.canvas__container').classList.remove('hidden');
       // intro.classList.add("hidden");
+      fadeIn(document.querySelector('.canvas__container'), true);
       fadeOut(intro)
+      startActions();
     }
   }
   console.log("action order");
@@ -250,15 +251,25 @@ function handleStart() {
 }
 
 function fadeOut(el, duration = 350) {
-  el.classList.add("fadeout");
+  el.classList.add('fadeout');
   setTimeout(() => {
-    el.classList.add("hidden");
+    el.classList.add('hidden');
+    el.classList.remove('fadeout');
+  }, duration);
+
+}
+
+function fadeIn(el, bottom = false, duration = 30) {
+  el.classList.remove('hidden');
+  el.classList.remove('fadeout');
+  setTimeout(() => {
+    bottom ? el.classList.add('fadein--bottom') : el.classList.add('fadein');
   }, duration);
 
 }
 
 function showInsturctions() {
-  const el = document.querySelector('.instructions')
+  document.querySelector('.instructions').classList.remove('hidden');
 }
 
 
@@ -309,6 +320,18 @@ function handleRetry() {
 }
 
 
+function handleReset() {
+  hideRetryState();
+  hideFailStamp();
+  resetGameState();
+  showInsturctions();
+  btnStart.classList.remove('hidden');
+  btnStop.classList.add('hidden');
+  const intro = document.querySelector('.inital__wrapper');
+  document.querySelector('.canvas__container').classList.add('hidden');
+  fadeIn(intro)
+}
+
 // When camera selection changes, restart with new device
 cameraSelect.addEventListener('change', () => {
   const selectedId = cameraSelect.value;
@@ -318,6 +341,7 @@ cameraSelect.addEventListener('change', () => {
 btnStart.addEventListener('click', handleStart);
 btnStop.addEventListener('click', handleStop);
 document.querySelector('#retry__btn').addEventListener('click', handleRetry);
+document.querySelector('#reset__btn').addEventListener('click', handleReset);
 
 
 /* __________ @SEC: UTILITIES __________ */
@@ -723,7 +747,7 @@ function addOverlay(ctx, landmarks, image, currentTime) {
   const DEFAULT_DURATION = 2_500;
 
   if (currentActionIndex < 0 || !showAction) {
-    addCountdowntimer({ ctx, duration: 5_000 });
+    addCountdowntimer({ ctx, duration: 6_000 });
     return;
   };
 

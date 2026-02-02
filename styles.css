@@ -191,6 +191,26 @@ button {
   background-color: var(--color-secondary-800);
 }
 
+.button--text {
+  background-color: transparent;
+  color: var(--color-primary-500);
+}
+
+.button--text:hover {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-700);
+}
+
+.button--text:active {
+  background-color: var(--color-primary-200);
+  color: var(--color-primary-800);
+}
+
+.margin-x-1 {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
 .select__label {
   font-family: var(--font-ui);
   font-size: 0.875rem;
@@ -254,9 +274,19 @@ select:active {
 }
 
 .fadeout {
-  animation: fade 350ms ease-out forwards;
+  animation: k_fadeout 350ms ease-out forwards;
   transform: translateY(0%);
   /* opacity: 1; */
+}
+
+.fadein {
+  animation: k_fadein 350ms ease-out forwards;
+  transform: translateY(-100%);
+}
+
+.fadein--bottom {
+  animation: k_fadein--bottom 350ms ease-out forwards;
+  transform: translateY(500%);
 }
 
 .stamp__failed {
@@ -274,6 +304,7 @@ select:active {
   margin-bottom: 2.0rem;
   opacity: 0.8;
   position: absolute;
+  z-index: 100;
 }
 
 .hidden {
@@ -281,7 +312,7 @@ select:active {
 }
 
 
-@keyframes fade {
+@keyframes k_fadeout {
   from {
     transform: translateY(0%);
     opacity: 1;
@@ -290,6 +321,30 @@ select:active {
     transform: translateY(-100%);
     opacity: 0;
 
+  }
+}
+
+@keyframes k_fadein {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+
+  }
+  to {
+    transform: translateY(0%);
+    opacity: 1;
+  }
+}
+
+@keyframes k_fadein--bottom {
+  from {
+    transform: translateY(500%);
+    opacity: 0;
+
+  }
+  to {
+    transform: translateY(0%);
+    opacity: 1;
   }
 }
 
