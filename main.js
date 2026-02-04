@@ -61,6 +61,7 @@ function resetGameState() {
   gameState.lastSmileTime = 0;
   gameState.gracePeriod = true;
   gameState.gameStartTime = 0;
+  gameState.actionOrder = createActionOrder;
   gameState.lastActionEndTime = 0;
 }
 
@@ -936,6 +937,8 @@ const actions = [
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'BE MORE ATTRACTIVE' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'TILT' } },
   { fn: drawMouthOnly, duration: 4_000, },
   { fn: drawMultiFace, duration: 4_000 },
   { fn: drawMoustache, duration: 4_000 },
