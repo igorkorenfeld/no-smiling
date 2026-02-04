@@ -302,7 +302,7 @@ select:active {
   transform: rotate(-12deg) translateY(2rem);
   margin-top: -1.0rem;
   margin-bottom: 2.0rem;
-  opacity: 0.8;
+  opacity: 0.9;
   position: absolute;
   z-index: 100;
 }
