@@ -107,16 +107,11 @@ async function createFaceLandmarker() {
 // faceLandmarker.onResults(onResults);
 
 function detectSmile(results) {
-  console.log(`results:\n`);
-  console.log(results.faceBlendshapes);
   let isSmiling = false;
   if (results.faceBlendshapes?.length) {
     const blendshapes = results.faceBlendshapes[0];
     const smileLeft = blendshapes.categories[44]?.score || 0;
-    console.log(blendshapes.categories[44]?.score);
     const smileRight = blendshapes.categories[45]?.score || 0;
-    console.log(`smileLeft :${smileLeft}`);
-    console.log(`smileRight :${smileRight}`);
     isSmiling = (smileLeft + smileRight) / 2 > 0.5;
   }
   return isSmiling;
@@ -190,8 +185,6 @@ async function startCamera(deviceId) {
     camera = new Camera(videoElement, {
       onFrame: async () => {
         const results = faceLandmarker.detectForVideo(videoElement, performance.now());
-        // console.log(`results:\n`);
-        // console.log(results);
         if (results.faceLandmarks) {
           onResults(results);
         }
@@ -247,8 +240,6 @@ function handleStart() {
       startActions();
     }
   }
-  console.log("action order");
-  console.log(createActionOrder());
 }
 
 function fadeOut(el, duration = 350) {
@@ -306,7 +297,6 @@ function handleStop() {
   }
   if (actionsIntervalId) {
     clearInterval(actionsIntervalId);
-    console.log(`removed active action interval id:${actionsIntervalId}`);
     actionsIntervalId = null;
   }
   showFailStamp();
@@ -525,8 +515,6 @@ function onResults(results) {
 
   if (results.faceLandmarks) {
     const landmarks = results.faceLandmarks[0]; // one face only
-    console.log("landmarks");
-    console.log(landmarks);
 
     // addTimer({ ctx, startTime: gameState.gameStartTime });
 
@@ -551,7 +539,6 @@ function onResults(results) {
     // const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
     let isSmiling = false;
     isSmiling = detectSmile(results);
-    console.log(`is smiling? ${isSmiling}`);
 
 
 
@@ -609,8 +596,8 @@ function handleSmile(isSimling, ctx) {
     }
     addSmilingText(ctx);
 
-    console.log(`activeSmile: ${gameState.activeSmile}`);
-    console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
+    // console.log(`activeSmile: ${gameState.activeSmile}`);
+    // console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
     if (!gameState.activeSmile) {
       gameState.smileCount++;
     }
@@ -640,9 +627,6 @@ function makeJoke(duration = 5_000) {
     if (currentLine >= lines.length) {
       currentLine = lines.length - 1;
     }
-    // console.log(`startTime: ${startTime}`);
-    // console.log(`elapsed: ${elapsed}, timePerLine: ${timePerLine}`);
-    // console.log(`currentLine : ${currentLine}`);
     ctx.save();
     ctx.font = `16px ${headerFont}, ${systemFont}`;
     ctx.textAlign = 'center';
@@ -687,7 +671,6 @@ function updateGameState() {
   //Case 2 smile after cutoff time
   //Case 3 time is up
   gameState.smilesLeft = gameConfig.smileLimit - gameState.smileCount;
-  console.log(gameState.smileCount);
   if (gameState.smileCount > gameConfig.smileLimit) {
     gameState.gameOver = true;
   }
@@ -731,16 +714,13 @@ const faceOutlinePts = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 28
 function startActions() {
   if (actionsIntervalId) {
     clearInterval(actionsIntervalId);
-    console.log(`removed previous action interval id:${actionsIntervalId}`);
   }
   actionsIntervalId = setInterval(() => {
     if (performance.now() - gameState.gameStartTime < gameConfig.actionInterval) return;
     currentActionIndex = (currentActionIndex + 1) % (actions.length);
-    console.log(`current action index: ${currentActionIndex}`);
     showAction = true;
     actionStartTime = performance.now();
   }, gameConfig.actionInterval)
-  console.log(`Start action interval id ${actionsIntervalId}`);
 }
 
 function addOverlay(ctx, landmarks, image, currentTime) {
@@ -763,8 +743,6 @@ function addOverlay(ctx, landmarks, image, currentTime) {
   const actionDuration = action.duration ?? DEFAULT_DURATION;
 
   if ((currentTime - actionStartTime) > actionDuration) {
-    // console.log(currentTime);
-    // console.log("end of action");
     showAction = false;
     gameState.lastActionEndTime = performance.now();
   }
@@ -889,7 +867,6 @@ function addTimer({ ctx, startTime }) {
   const elasped = performance.now() - startTime;
   const seconds = Math.floor(elasped / 1_000);
   const minutes = Math.floor(seconds / 60);
-  // console.log(`${ minutes.toString().padStart(2, '0') }: ${(seconds % 60).toString().padStart(2, '0')} `);
   const text = `${minutes.toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')} `;
 
   ctx.save();
@@ -900,7 +877,6 @@ function addTimer({ ctx, startTime }) {
   ctx.fillText(text, canvas.width / 2 - (ctx.measureText(text).width / 2), canvas.height - 20);
 
   ctx.restore();
-  // console.log(text);
 }
 
 function addCountdowntimer({ ctx, duration }) {
@@ -1203,7 +1179,6 @@ function drawEmojiAroundMouth({ ctx, landmarks }) {
     ctx.font = `${mouthBox.h * 0.75}px Arial`;
     const offset = position.y > midPoint ? 5 : -5;
     ctx.translate(Math.round(position.x - (ctx.measureText(emoji).width / 2)), position.y + offset);
-    console.log(`emoji width ${ctx.measureText(emoji).width} `);
     ctx.rotate(getFaceAngle({ landmarks }));
     ctx.scale(-1, -1);
     ctx.fillText(emoji, 0, 0);
@@ -1249,15 +1224,12 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
   }
 
 
-  console.log(`Redner width: ${leftRenderWidth} `);
 
-  console.log(mouthOffset);
 
   // Left Eye
   ctx.save();
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(destPosition.left.x, destPosition.left.y)
-  console.log(destPosition.left);
   // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
   getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
   ctx.strokeStyle = "red";
@@ -1274,7 +1246,6 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
   ctx.save();
   // ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(destPosition.right.x, destPosition.right.y)
-  console.log(destPosition.right);
   // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
   getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
   ctx.strokeStyle = "red";
@@ -1395,7 +1366,6 @@ function makeEyeEmojiDrawer() {
     //Left side
     ctx.save();
     ctx.font = `${lHeight * 3}px Arial`;
-    console.log(`${lHeight}px Arial`);
     ctx.translate(
       // Math.round(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2)),
       Math.round(leftEyeCenter.x + (ctx.measureText(eyeEmoji).width / 2)),
@@ -1409,8 +1379,6 @@ function makeEyeEmojiDrawer() {
     //Right side
     ctx.save();
     ctx.font = `${rHeight * 3}px Arial`;
-    console.log(`${rHeight}px Arial`);
-    console.log(`${rightEyeCenter.y.toFixed((2))}px y position`);
     ctx.translate(
       Math.round(rightEyeCenter.x - (ctx.measureText(eyeEmoji).width / 2)),
       Math.round(rightEyeCenter.y) + 10,
