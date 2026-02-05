@@ -672,7 +672,8 @@ function updateGameState() {
   //Case 2 smile after cutoff time
   //Case 3 time is up
   gameState.smilesLeft = gameConfig.smileLimit - gameState.smileCount;
-  if (gameState.smileCount > gameConfig.smileLimit) {
+  console.log(`smilesleft: ${gameState.smilesLeft}`);
+  if (gameState.smilesLeft <= 0) {
     gameState.gameOver = true;
   }
 
@@ -683,6 +684,9 @@ function updateGameState() {
 
 function handleGameOver() {
   flash.drawFlash(ctx, canvas);
+  setTimeout(() => {
+    ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+  }, 300)
   console.log("Game over");
   setTimeout(handleStop, 500);
 }
@@ -884,7 +888,7 @@ function addCountdowntimer({ ctx, duration }) {
   if (gameState.lastActionEndTime <= 0) {
     gameState.lastActionEndTime = performance.now();
   }
-  const remain = Math.floor((duration + 1 - (performance.now() - gameState.lastActionEndTime)) / 1_000); // In seconds
+  const remain = Math.floor((duration - (performance.now() - gameState.lastActionEndTime)) / 1_000); // In seconds
   if (remain < 0) return;
   const text = `0:${(remain).toString().padStart(2, '0')} `;
 
@@ -915,7 +919,7 @@ const actions = [
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
   { fn: drawWord, duration: 5_000, config: { word: 'BE MORE ATTRACTIVE' } },
-  { fn: drawWord, duration: 5_000, config: { word: 'TILT' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'TILT FORWARD BACKWARD' } },
   { fn: drawMouthOnly, duration: 4_000, },
   { fn: drawMultiFace, duration: 4_000 },
   { fn: drawMoustache, duration: 4_000 },
