@@ -5,8 +5,9 @@
 // import { Camera } from '@mediapipe/camera_utils';
 // import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
 //npm install @mediapipe/face_mesh @mediapipe/camera_utils @mediapipe/drawing_utils
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
-
+// import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+// await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs');
+const { FaceLandmarker, FilesetResolver } = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs');
 /* __________ @SEC: DOM CONSTANTS __________ */
 
 const videoElement = document.getElementById('video');
