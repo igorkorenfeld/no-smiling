@@ -50,6 +50,7 @@ const gameState = {
   gameStartTime: 0,
   actionOrder: [],
   lastActionEndTime: 0,
+  noFace: false,
 }
 
 function resetGameState() {
@@ -64,6 +65,7 @@ function resetGameState() {
   gameState.gameStartTime = 0;
   gameState.actionOrder = createActionOrder;
   gameState.lastActionEndTime = 0;
+  gameState.noFace = false;
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
@@ -289,6 +291,14 @@ function hideFailStamp() {
   document.querySelector('.stamp__failed').classList.add('hidden');
 }
 
+function showNoFaceMessage() {
+  document.querySelector('.retry__noface').classList.remove('hidden');
+}
+
+function hideNoFaceMessage() {
+  document.querySelector('.retry__noface').classList.add('hidden');
+}
+
 
 function handleStop() {
   gameState.gameOver = true;
@@ -302,10 +312,14 @@ function handleStop() {
   }
   showFailStamp();
   showRetryState();
+  if (gameState.noFace) {
+    showNoFaceMessage();
+  }
 }
 
 function handleRetry() {
   hideRetryState();
+  hideNoFaceMessage();
   hideFailStamp();
   resetGameState();
   handleStart();
@@ -516,6 +530,13 @@ function onResults(results) {
 
   if (results.faceLandmarks) {
     const landmarks = results.faceLandmarks[0]; // one face only
+    if (!landmarks && !gameState.gracePeriod) {
+      console.log("couldn't detect face");
+      gameState.gameOver = true;
+      gameState.noFace = true;
+      handleGameOver();
+      return;
+    }
 
     // addTimer({ ctx, startTime: gameState.gameStartTime });
 
