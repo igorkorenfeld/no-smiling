@@ -49,21 +49,40 @@ html {
 body {
   background: 
     url('ooi_logo_extended-07.svg'),
+    /* url("data:image/svg+xml,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'> <filter id='noiseFilter'> <feTurbulence type='fractalNoise' baseFrequency='1.28' numOctaves='3' stitchTiles='stitch'/> </filter> <rect width='100%' height='100%' filter='url(%23noiseFilter)'/></svg>"), */
     var(--color-bg);
   /* background-position: calc(100vw - (133vmin / 2)) 5vh; */
-  background-position: 20vw 50vh;
-  background-size: 140vmin;
-  background-repeat: no-repeat;
+  background-position: 
+    20vw 50vh, 
+    0 0,
+    0 0;
+  background-size: 
+    140vmin,
+    100% 100%,
+    auto;
+  background-repeat: no-repeat, repeat, repeat;
   background-attachment: scroll;
 
   @media screen and (min-width: 640px) {
-    background-size: 100vmin;
-    background-position: 40vw 32vh;
+    background-position: 
+      40vw 32vh,
+      0 0,
+      0 0;
+    background-size: 
+      100vmin,
+      100% 100%,
+      0 0;
   }
 
   @media screen and (min-width: 960px) {
-    background-size: 90vmin;
-    background-position: 40vw 25vh;
+    background-position: 
+      40vw 25vh,
+      0 0,
+      0 0;
+    background-size: 
+      90vmin,
+      100% 100%,
+      auto;
   }
 }
 
@@ -135,7 +154,10 @@ h1:after {
   top: -24px;
 }
 
-
+.abandon__wrapper {
+  display: flex;
+  justify-content: center;
+}
 .instructions,
 .retry {
   font-family: var(--font-ui);

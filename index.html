@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>No Smiling</title>
-  <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Michroma&display=swap"> -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/favicons/apple-touch-icon.png" >
+  <link rel="icon" type="image/svg+xml" href="/favicons/favicon.svg"/>
   <link rel="stylesheet" type="text/css" href="reset.css" />
   <link rel="stylesheet" type="text/css" href="styles.css" />
 
@@ -35,7 +37,9 @@
           <canvas id="c1" class="output_canvas" width="640" height="480"></canvas>
           <canvas id="c2" class="temp_canvas hidden" width="640" height="480"></canvas>
         </div>
-        <button id="video__stop" class="button--secondary hidden">Abandon</button>
+        <div class="abandon__wrapper">
+          <button id="video__stop" class="button--secondary hidden">Abandon</button>
+        </div>
         <div class="retry hidden"> 
           <p class="retry__noface hidden"> Your face wasn't fully visible.</p>
           <p> You failed to follow the instructions and get a proper photo. This is a <strong class="text-secondary-600"> dissapointment. </strong></p>
@@ -47,6 +51,27 @@
     <!-- MediaPipe core + camera utils + FaceMesh -->
     <script defer src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <script type="module" src="./main.js"></script>
+
+<!-- // Save -->
+<!-- <canvas id="myCanvas" width="400" height="400"></canvas> -->
+<!-- <button id="download">Download Canvas</button> -->
+<!---->
+<!-- <script> -->
+<!--   const canvas = document.getElementById('myCanvas'); -->
+<!--   const ctx = canvas.getContext('2d'); -->
+<!---->
+<!--   // Draw something on the canvas -->
+<!--   ctx.fillStyle = 'blue'; -->
+<!--   ctx.fillRect(50, 50, 300, 300); -->
+<!---->
+<!--   document.getElementById('download').addEventListener('click', function() { -->
+<!--     const canvasUrl = canvas.toDataURL('image/png'); // Convert to PNG -->
+<!--     const link = document.createElement('a'); -->
+<!--     link.href = canvasUrl; -->
+<!--     link.download = 'myCanvasImage.png'; // Set the file name -->
+<!--     link.click(); // Trigger the download -->
+<!--   }); -->
+<!-- </script> -->
   </body>
 </html>
 
