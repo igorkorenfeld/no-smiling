@@ -246,6 +246,10 @@ button {
   font-weight: 700;
 }
 
+.padding-right-p5 {
+  padding-right: 0.5rem;
+}
+
 .margin-x-1 {
   margin-left: 1rem;
   margin-right: 1rem;
