@@ -315,6 +315,16 @@ function handleStop() {
   if (gameState.noFace) {
     showNoFaceMessage();
   }
+  updateSaveLink();
+}
+
+function updateSaveLink() {
+  const canvasURL = canvas.toDataURL('image/png')
+  const saveButton = document.getElementById('save__btn');
+  saveButton.href = canvasURL;
+  const date = new Date();
+  const dateFormat = date.toLocaleDateString('en-GB');
+  saveButton.download = `DisappointingPhoto_${dateFormat}`;
 }
 
 function handleRetry() {
@@ -1554,7 +1564,6 @@ function createPreviousFaceAction() {
 
 /* __________ @SEC: RUN __________ */
 run();
-
 
 /* __________ @SEC: TODO / ARCHIVE JITTER __________ */
 

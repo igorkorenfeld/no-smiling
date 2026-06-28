@@ -158,6 +158,12 @@ h1:after {
   display: flex;
   justify-content: center;
 }
+
+.save__wrapper {
+  display: flex;
+  justify-items: flex-end;
+}
+
 .instructions,
 .retry {
   font-family: var(--font-ui);
@@ -182,6 +188,7 @@ button {
   letter-spacing: 1px;
   border: none;
   border-radius: 2px;
+  cursor: pointer;
 }
 
 .button--primary {
@@ -228,9 +235,24 @@ button {
   color: var(--color-primary-800);
 }
 
+
+.button--text-only {
+  padding-left: 0;
+}
+
+.button--text-only:active,
+.button--text-only:hover {
+  background-color: transparent;
+  font-weight: 700;
+}
+
 .margin-x-1 {
   margin-left: 1rem;
   margin-right: 1rem;
+}
+
+.margin-bottom-2 {
+  margin-bottom: 2rem;
 }
 
 .select__label {
