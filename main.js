@@ -544,7 +544,7 @@ function onResults(results) {
       console.log("couldn't detect face");
       gameState.gameOver = true;
       gameState.noFace = true;
-      handleGameOver();
+      handleGameOver(landmarks);
       return;
     }
 
@@ -604,7 +604,7 @@ function onResults(results) {
     }
     updateGameState();
     if (gameState.gameOver) {
-      handleGameOver();
+      handleGameOver(landmarks);
     };
 
     drawSmilesLeft(ctx);
@@ -713,10 +713,14 @@ function updateGameState() {
   }
 }
 
-function handleGameOver() {
+function handleGameOver(landmarks) {
+
+
+  const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
   flash.drawFlash(ctx, canvas);
   setTimeout(() => {
     ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    addOverlay(ctx, landmarks, videoElement, performance.now());
   }, 300)
   console.log("Game over");
   setTimeout(handleStop, 500);
@@ -950,7 +954,7 @@ const actions = [
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE FOR REAL' } },
   { fn: drawWord, duration: 5_000, config: { word: 'SMILE RIGHT NOW' } },
   { fn: drawWord, duration: 5_000, config: { word: 'BE MORE ATTRACTIVE' } },
-  { fn: drawWord, duration: 5_000, config: { word: 'TILT FORWARD BACKWARD' } },
+  { fn: drawWord, duration: 5_000, config: { word: 'BE LESS ATTRACTIVE' } },
   { fn: drawMouthOnly, duration: 4_000, },
   { fn: drawMultiFace, duration: 4_000 },
   { fn: drawMoustache, duration: 4_000 },
