@@ -24,7 +24,6 @@ const headerFont = 'Michroma';
 const systemFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
 
 /* __________ @SEC: GAMESTATE  __________ */
-// TODO: determine if showAction should be used, currently it's just set and unset but not checked for.
 let showAction = false;
 let currentActionIndex = -1;
 
@@ -69,28 +68,6 @@ function resetGameState() {
 }
 
 /* __________ @SEC: FaceMesh INIT __________ */
-/* Doing this early to help with page load */
-
-// Initialize FaceMesh solution
-// const faceMesh = new FaceMesh({
-//   locateFile: (file) =>
-//     // `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-//     `./node_modules/@mediapipe/face_mesh/${file}`
-// });
-//
-// faceMesh.setOptions({
-//   maxNumFaces: 1,
-//   refineLandmarks: false,
-//   minDetectionConfidence: 0.5,
-//   minTrackingConfidence: 0.5,
-// });
-//
-// let faceMeshReady = false;
-// await faceMesh.initialize();
-// faceMeshReady = true;
-
-
-// faceMesh.onResults(onResults);
 
 let faceLandmarker = null;
 async function createFaceLandmarker() {
@@ -106,8 +83,6 @@ async function createFaceLandmarker() {
     outputFaceLandmarks: true,
   });
 }
-
-// faceLandmarker.onResults(onResults);
 
 function detectSmile(results) {
   let isSmiling = false;
@@ -208,18 +183,6 @@ async function startCamera(deviceId) {
     return false; // failure
   }
   //
-  // // MediaPipe Camera util accepts a video element and onFrame callback
-  // camera = new Camera(videoElement, {
-  //   onFrame: async () => {
-  //     await faceMesh.send({ image: videoElement });
-  //   },
-  //   width: 640,
-  //   height: 480,
-  //   facingMode: 'user',
-  //   deviceId: deviceId, // custom field; many people pass through constraints here
-  // });
-  //
-  // camera.start();
 }
 
 // Simple wrappers for buttons
@@ -236,8 +199,6 @@ function handleStart() {
       btnStart.classList.add('hidden');
       btnStop.classList.remove('hidden');
       const intro = document.querySelector('.inital__wrapper');
-      // document.querySelector('.canvas__container').classList.remove('hidden');
-      // intro.classList.add("hidden");
       fadeIn(document.querySelector('.canvas__container'), true);
       fadeOut(intro)
       startActions();
@@ -266,12 +227,6 @@ function fadeIn(el, bottom = false, duration = 30) {
 function showInsturctions() {
   document.querySelector('.instructions').classList.remove('hidden');
 }
-
-
-// function updateRetryState() {
-//   btnStop.classList.toggle('hidden');
-//   retrySection.classList.toggle('hidden');
-// }
 
 function showRetryState() {
   btnStop.classList.add('hidden');
@@ -324,7 +279,9 @@ function updateSaveLink() {
   saveButton.href = canvasURL;
   const date = new Date();
   const dateFormat = date.toLocaleDateString('en-GB');
-  saveButton.download = `DisappointingPhoto_${dateFormat}`;
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  saveButton.download = `DisappointingPhoto_${dateFormat}_${hours}${minutes}`;
 }
 
 function handleRetry() {
@@ -541,46 +498,14 @@ function onResults(results) {
   if (results.faceLandmarks) {
     const landmarks = results.faceLandmarks[0]; // one face only
     if (!landmarks && !gameState.gracePeriod) {
-      console.log("couldn't detect face");
       gameState.gameOver = true;
       gameState.noFace = true;
       handleGameOver(landmarks);
       return;
     }
 
-    // addTimer({ ctx, startTime: gameState.gameStartTime });
-
-
-    // drawMouthPoints({ ctx, landmarks });
-    // drawMoustacheEmoji(ctx, landmarks);
-
-    //Draw Eye line
-    // drawEyeLine(ctx, landmarks);
-    // tempAction({ ctx, landmarks, image: results.image, });
-    // drawMoustache({ ctx, landmarks });
-    // drawSeeThroughMouth({ ctx, landmarks, image: results.image });
-    // drawEyeEmoji({ ctx, landmarks });
-    // tempDrawEmoji({ ctx, landmarks });
-    // drawEmojiAroundMouth({ ctx, landmarks });
-    // drawMouthOnEyes({ ctx, landmarks, image: results.image });
-
-
-    // Detect Smile
-    // const { score, mouthWidth, mouthHeight } = getSmileScore(landmarks);
-    // const { score, rightDiff, centerDiff, leftDiff, widthDiff } = getSmileScore(landmarks)
-    // const isSmiling = score < 0.32 || (score > 0.49 && score < 0.75);
     let isSmiling = false;
     isSmiling = detectSmile(results);
-
-
-
-    //Extract to handle smile
-    // drawFaceUpsideDown(ctx, landmarks);
-    // drawMouthOnly(ctx, landmarks, results.image);
-    // drawMultiFace(ctx, landmarks, results.image);
-    // draw3DOrbitingImage({ ctx, landmarks, startTime: gameState.gameStartTime });
-
-    // if (!score) return;
 
     if (isSmiling) {
       const cx = ((MOUTH.LEFT.x + MOUTH.RIGHT.x) / 2) * canvas.width;
@@ -618,7 +543,6 @@ function handleSmile(isSimling, ctx) {
   if (isSimling) {
     const now = performance.now();
     const SMILE_TIME_TOLERANCE = 850
-    // Dislay similing text
 
     // Early return during grace period
     // Early return for smiles that were less than a second ago;
@@ -628,8 +552,6 @@ function handleSmile(isSimling, ctx) {
     }
     addSmilingText(ctx);
 
-    // console.log(`activeSmile: ${gameState.activeSmile}`);
-    // console.log(`lastSmileTime: ${gameState.lastSmileTime}`);
     if (!gameState.activeSmile) {
       gameState.smileCount++;
     }
@@ -649,7 +571,6 @@ function makeJoke(duration = 5_000) {
     'We\'ll be asking \nthe questions \naround here!',
   ]
 
-  const startTime = performance.now();
   const totalTime = duration;
   const timePerLine = (totalTime) / lines.length / 1000;
 
@@ -683,19 +604,6 @@ function makeJoke(duration = 5_000) {
     ctx.restore();
 
   }
-
-  // function drawLine(t) {
-  //   if (performance.now() - startTime >= totalTime) {
-  //     if (animationId) {
-  //       cancelAnimationFrame(animationId)
-  //     }
-  //   }
-  //
-  //
-  //   requestAnimationFrame(drawLine);
-  // }
-  //
-  // requestAnimationFrame(drawLine);
 }
 
 function updateGameState() {
@@ -703,7 +611,6 @@ function updateGameState() {
   //Case 2 smile after cutoff time
   //Case 3 time is up
   gameState.smilesLeft = gameConfig.smileLimit - gameState.smileCount;
-  console.log(`smilesleft: ${gameState.smilesLeft}`);
   if (gameState.smilesLeft <= 0) {
     gameState.gameOver = true;
   }
@@ -715,8 +622,6 @@ function updateGameState() {
 
 function handleGameOver(landmarks) {
 
-
-  const snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
   flash.drawFlash(ctx, canvas);
   setTimeout(() => {
     ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -963,10 +868,6 @@ const actions = [
   { fn: drawEmojiAroundMouth },
   { fn: makeEyeEmojiDrawer(), duration: 6_000 },
   { fn: drawFaceWord, config: { word: 'Sus' } },
-  // { fn: drawWord, duration: 3_000, config: { word: 'KNOCK KNOCK' } },
-  // { fn: drawEyeLine },
-  // drawMouthOnly(ctx, landmarks, results.image);
-  // drawMultiFace(ctx, landmarks, results.image);
 ];
 
 function createActionOrder() {
@@ -1021,7 +922,7 @@ function drawFaceWord({ ctx, landmarks, word }) {
   const angleRadians = Math.atan2(dy, dx);
 
   ctx.save();
-  // Let's change the canvas position to draw rotated
+  // Change the canvas position to draw rotated
   ctx.font = `24px ${systemFont} `;
   ctx.translate(foreheadX, foreheadY);
   ctx.rotate(angleRadians);
@@ -1132,8 +1033,6 @@ function drawMultiFace({ ctx, landmarks, image }) {
     ctx.save();
     ctx.translate(destX, faceOutlineBox.y);
 
-    // 200, 
-
     const origin = 10;
     ctx.beginPath();
 
@@ -1239,13 +1138,6 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
     right: normLandmark(362, landmarks)
   }
 
-
-  const leftScale = leftEyeDimensions.h / leftEyeDimensions.w;
-  const rightScale = rightEyeDimensions.h / rightEyeDimensions.w;
-
-  const mouthScale = mouthBox.w / mouthBox.h;
-  const leftRenderWidth = leftEyeDimensions.h * mouthScale;
-
   const destPosition = {
     left: {
       x: eyePosition.left.x + (leftEyeDimensions.w / 2) - (mouthBox.w / 2),
@@ -1258,19 +1150,10 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
     }
   }
 
-  const mouthOffset = {
-    x: mouthBox.x - (mouthBox.w / 2),
-    y: mouthBox.y - (mouthBox.w / 2),
-  }
-
-
-
-
   // Left Eye
   ctx.save();
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(destPosition.left.x, destPosition.left.y)
-  // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
+  // The problem is that the mouthoutline happens without accounting for the translate above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
   getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
   ctx.strokeStyle = "red";
   ctx.stroke();
@@ -1284,9 +1167,7 @@ function drawMouthOnEyes({ ctx, landmarks, image }) {
 
   // Right Eye
   ctx.save();
-  // ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(destPosition.right.x, destPosition.right.y)
-  // The problem is that the mouthoutline happens without accounting for the trasnalte above, so need to offset the position x  and y  by the mouthBox x and y (position.left.x - mouthBox.x);
   getMouthOutline({ ctx, landmarks, offset: { x: mouthBox.x, y: mouthBox.y } });
   ctx.strokeStyle = "red";
   ctx.stroke();
@@ -1398,10 +1279,6 @@ function makeEyeEmojiDrawer() {
     else {
       rHeight = lastFontSize.right;
     }
-
-    // const lHeight = newFontSize.left > lastFontSize.left + 1 ? 
-    // const rHeight = Math.floor(eucDist(rightEye.top, rightEye.bottom));
-
 
     //Left side
     ctx.save();
@@ -1541,24 +1418,9 @@ function createPreviousFaceAction() {
       state.lastFrameTime = performance.now();
     }
 
-
     if (state.prevFaceBox && state.prevCanvas.width > 0) {
-      const c2 = document.getElementById('c2');
-      const ctx2 = c2.getContext("2d");
-      // ctx.fillStyle = "red";
-      // ctx.fillRect(0, 0, 200, 200);
       ctx.save();
       ctx.globalAlpha = 0.8;
-      // ctx.drawImage(
-      //   state.prevCanvas,
-      //   state.prevFaceBox.x, state.prevFaceBox.y,
-      //   state.prevFaceBox.w, state.prevFaceBox.h
-      // );
-      // ctx.drawImage(
-      //   state.prevCanvas,
-      //   state.prevFaceBox.x + 20, state.prevFaceBox.y + 20,
-      //   state.prevFaceBox.w, state.prevFaceBox.h
-      // );
       ctx.drawImage(state.prevCanvas, 0, 0);
       ctx.restore();
     }
@@ -1568,40 +1430,4 @@ function createPreviousFaceAction() {
 
 /* __________ @SEC: RUN __________ */
 run();
-
-/* __________ @SEC: TODO / ARCHIVE JITTER __________ */
-
-
-// mouthConfidence = clamp(1.0 - (mouthJitter / JITTER_MAX), 0, 1) * shapeScore;
-//     const mouthLandmarkHistory = {
-//   61: [], // array of {x, y} points for landmark 61
-//   291: [], 
-//   13: [], 
-//   14: []
-// };
-
-// Update history with latest points elsewhere when frame arrives
-// Here dataPerFrame is {61: {x,y}, 291: {x,y}, ...}
-
-// function computeMouthJitter(mouthLandmarkHistory, currentFramePoints) {
-//   const landmarkIndices = [61, 291, 13, 14];
-//   let totalDist = 0;
-//   let count = 0;
-//
-//   landmarkIndices.forEach(i => {
-//     const history = mouthLandmarkHistory[i];
-//     if (history.length > 0) {
-//       const lastPoint = history[history.length - 1];
-//       totalDist += euclideanDist(currentFramePoints[i], lastPoint);
-//       count++;
-//     }
-//     history.push(currentFramePoints[i]);
-//     // limit history size to last M frames
-//     if (history.length > 10) history.shift();
-//   });
-//
-//   if (count === 0) return 0;
-//   return totalDist / count;
-// }
-
 
